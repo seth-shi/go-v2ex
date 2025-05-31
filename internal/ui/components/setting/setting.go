@@ -2,13 +2,14 @@ package setting
 
 import (
 	"fmt"
+	"log"
 	"strings"
+
+	"github.com/seth-shi/go-v2ex/internal/types"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/internal/ui/context"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
@@ -27,14 +28,13 @@ var (
 
 type Model struct {
 	focusIndex int
+	config     types.FileConfig
 	inputs     []textinput.Model
-	ctx        *context.Data
 }
 
-func New(ctx *context.Data) Model {
+func New() Model {
 	m := Model{
 		inputs: make([]textinput.Model, 2),
-		ctx:    ctx,
 	}
 
 	var t textinput.Model
@@ -64,6 +64,17 @@ func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+func (m Model) SetConfig(cfg types.FileConfig) {
+	m.config = cfg
+	if len(m.inputs) > 0 {
+		m.inputs[0].SetValue(m.config.Token)
+	}
+
+	if len(m.inputs) > 1 {
+		m.inputs[1].SetValue(m.config.Nodes)
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -74,7 +85,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
 			if s == "enter" && m.focusIndex == len(m.inputs) {
-				return m, m.saveSettings
+				return m, m.saveSettings()
 			}
 
 			// Cycle indexes
@@ -105,7 +116,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs[i].TextStyle = noStyle
 			}
 
-			m.ctx.Error = nil
+			// TODO 清楚所有错误
 			return m, tea.Batch(cmds...)
 		}
 	}
@@ -128,41 +139,33 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m Model) UpdateInputValues() {
+func (m Model) saveSettings() tea.Cmd {
 	if len(m.inputs) > 0 {
-		m.inputs[0].SetValue(m.ctx.Config.Token)
+		m.config.Token = strings.TrimSpace(m.inputs[0].Value())
 	}
 
 	if len(m.inputs) > 1 {
-		m.inputs[1].SetValue(m.ctx.Config.Nodes)
-	}
-}
-
-func (m Model) saveSettings() tea.Msg {
-	if len(m.inputs) > 0 {
-		m.ctx.Config.Token = strings.TrimSpace(m.inputs[0].Value())
-	}
-
-	if len(m.inputs) > 1 {
-		m.ctx.Config.Nodes = strings.TrimSpace(m.inputs[1].Value())
+		m.config.Nodes = strings.TrimSpace(m.inputs[1].Value())
 	}
 
 	// 保存数据
-	if err := m.ctx.Config.SaveToFile(); err != nil {
-		m.ctx.Error = err
+	if err := m.config.SaveToFile(); err != nil {
 		// 停留在此页面
-		return nil
+		return messages.Post(err)
 	}
 
-	return messages.GoToHome{Config: lo.ToPtr(m.ctx.Config)}
+	return messages.Post(messages.SettingSaveResult{Config: m.config})
 }
 
 func (m Model) View() string {
 	var b strings.Builder
 
+	log.Println("setting")
+	log.Println(m.config)
+
 	text := fmt.Sprintf(
 		"配置文件路径:%s",
-		m.ctx.Config.ConfigPath(),
+		m.config.ConfigPath(),
 	)
 	b.WriteString(tipStyle.Render(text))
 

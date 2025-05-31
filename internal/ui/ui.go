@@ -3,133 +3,126 @@ package ui
 import (
 	"strings"
 
-	"github.com/seth-shi/go-v2ex/internal/http"
-
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/samber/lo"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/ui/context"
-	"github.com/seth-shi/go-v2ex/internal/ui/events"
+	"github.com/seth-shi/go-v2ex/internal/types"
+	"github.com/seth-shi/go-v2ex/internal/ui/components/footer"
+	"github.com/seth-shi/go-v2ex/internal/ui/components/header"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
-	"github.com/seth-shi/go-v2ex/internal/ui/pages/help"
-	"github.com/seth-shi/go-v2ex/internal/ui/pages/home"
-	"github.com/seth-shi/go-v2ex/internal/ui/pages/setting"
+	"github.com/seth-shi/go-v2ex/internal/ui/routes"
 )
 
 type Model struct {
-	spinner       spinner.Model
-	ctx           *context.Data
 	currBodyModel tea.Model
-	helpModel     help.Model
-	settingModel  setting.Model
-	homeModel     home.Model
+	headerModel   tea.Model
+	footerModel   tea.Model
+	screen        types.ScreenSize
 }
 
 func NewModel() Model {
-
-	ctxData := &context.Data{LoadingText: lo.ToPtr("初始化配置中...")}
 	return Model{
-		ctx:          ctxData,
-		spinner:      spinner.New(spinner.WithSpinner(spinner.Globe)),
-		helpModel:    help.New(ctxData),
-		settingModel: setting.New(ctxData),
-		homeModel:    home.New(ctxData),
+		currBodyModel: routes.SplashModel,
+		headerModel:   header.New(),
+		footerModel:   footer.New(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
-		m.spinner.Tick,
-		events.InitFileConfig,
-		m.settingModel.Init(),
-		m.homeModel.Init(),
+		messages.Post(messages.LoadConfigRequest{}),
+		// 其它不要用 init 初始化, 使用消息去刷新
+		m.headerModel.Init(),
+		m.footerModel.Init(),
+		m.currBodyModel.Init(),
 	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch typeMsg := msg.(type) {
+	// 全局监听, 并且子组件也需要监听的事件
 	case tea.WindowSizeMsg:
-		m.ctx.OnWindowChange(typeMsg)
+		m.screen.Sync(typeMsg)
+	// 全局监听, 无需转给子组件
+	case messages.LoadConfigResult:
+		return m, tea.Batch(messages.Post(messages.LoadingLoadConfigKey.End), m.onConfigLoaded(typeMsg.Config, typeMsg.Error))
+	case messages.LoadConfigRequest:
+		return m, tea.Batch(messages.Post(messages.LoadingLoadConfigKey.Start), config.LoadFileConfig)
+	case messages.SettingSaveResult:
+		return m, m.onConfigLoaded(typeMsg.Config, nil)
+	case messages.RedirectPageRequest:
+		m.currBodyModel = typeMsg.Page
 		return m, nil
-	case messages.UiMessageInit:
-		return m, m.initSuccess(typeMsg)
-	case messages.GoToHome:
-		m.currBodyModel = m.homeModel
-		m.refreshConfig(typeMsg.Config)
-		return m, nil
-	case messages.GetMe:
-		m.ctx.Error = typeMsg.Error
-		m.ctx.Me = typeMsg.Member
-		m.ctx.LoadingText = nil
-		return m, nil
-	case messages.GetTopics:
-		m.ctx.Error = typeMsg.Error
-		m.ctx.Topics = typeMsg.Topics
-		return m, nil
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(typeMsg)
-		return m, cmd
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(typeMsg, consts.AppKeyMap.Setting):
-			m.currBodyModel = m.settingModel
-			return m, nil
-		case key.Matches(typeMsg, consts.AppKeyMap.Help):
-			m.currBodyModel = m.helpModel
-			return m, nil
+		case key.Matches(typeMsg, consts.AppKeyMap.SettingPage):
+			return m, messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
+		case key.Matches(typeMsg, consts.AppKeyMap.HelpPage):
+			return m, messages.Post(messages.RedirectPageRequest{Page: routes.HelpModel})
+		case key.Matches(typeMsg, consts.AppKeyMap.Back):
+			return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
 		case key.Matches(typeMsg, consts.AppKeyMap.Quit):
 			return m, tea.Quit
 		}
 	}
 
-	return m.bodyUpdate(msg)
+	// 更新当前的主要三个部分组件
+	var (
+		cmds []tea.Cmd
+		cmd  tea.Cmd
+	)
+	m.headerModel, cmd = m.headerModel.Update(msg)
+	cmds = append(cmds, cmd)
+	m.currBodyModel, cmd = m.currBodyModel.Update(msg)
+	cmds = append(cmds, cmd)
+	m.footerModel, cmd = m.footerModel.Update(msg)
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
 
-	s := strings.Builder{}
-	s.WriteString(m.headerView())
-	s.WriteString(m.bodyView())
-	s.WriteString(m.footerView())
-	return s.String()
+	var (
+		output strings.Builder
+	)
+
+	output.WriteString(m.headerModel.View())
+	output.WriteRune('\n')
+	output.WriteString(m.currBodyModel.View())
+	output.WriteRune('\n')
+
+	// 底部增加一个 padding, 来固定在底部
+	ff := m.footerModel.View()
+	paddingTop := m.screen.Height - lipgloss.Height(output.String()) - lipgloss.Height(ff)
+	output.WriteString(lipgloss.NewStyle().PaddingTop(paddingTop).Render(ff))
+
+	return output.String()
 }
 
-func (m *Model) initSuccess(typeMsg messages.UiMessageInit) tea.Cmd {
+func (m Model) onConfigLoaded(config types.FileConfig, err error) tea.Cmd {
 
-	m.refreshConfig(typeMsg.Config)
-	m.ctx.Error = typeMsg.Error
-	m.ctx.LoadingText = nil
-
-	if m.ctx.Config.Token == "" {
-		m.currBodyModel = m.settingModel
-		return nil
+	if err != nil {
+		return messages.Post(err)
 	}
 
-	// 否则跳转到首页
-	http.V2exClient.SetConfig(m.ctx.Config)
-	m.currBodyModel = m.homeModel
+	// 把配置注入到其他页面
+	api.Client.SetConfig(config)
+	routes.SettingModel.SetConfig(config)
 
-	// 获取个人中心的数据
-	m.ctx.LoadingText = lo.ToPtr("登录中...")
-	m.ctx.TopicPage = 1
-	return tea.Batch(events.GetMe, events.GetTopics(1))
-}
-
-func (m *Model) refreshConfig(config *config.FileConfig) {
-
-	if config == nil {
-		return
+	// 第一次没 token 去配置页面
+	if config.Token == "" {
+		return messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
 	}
 
-	m.ctx.Config = lo.FromPtr(config)
-	// 没配置到秘钥跳转到设置也
-	m.settingModel.UpdateInputValues()
-	// 否则跳转到首页
-	http.V2exClient.SetConfig(m.ctx.Config)
+	// 去触发对应的地方获取数据
+	return tea.Batch(
+		messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}),
+		messages.Post(messages.GetTopicsRequest{Page: 1}),
+		messages.Post(messages.GetMeRequest{}),
+	)
 }

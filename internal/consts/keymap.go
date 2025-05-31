@@ -5,31 +5,31 @@ import (
 )
 
 type KeyMap struct {
-	Up      key.Binding
-	Down    key.Binding
-	Left    key.Binding
-	Right   key.Binding
-	Help    key.Binding
-	Setting key.Binding
-	Quit    key.Binding
-	Tab     key.Binding
-	Back    key.Binding
-	Enter   key.Binding
+	Up          key.Binding
+	Down        key.Binding
+	Left        key.Binding
+	Right       key.Binding
+	HelpPage    key.Binding
+	SettingPage key.Binding
+	Quit        key.Binding
+	Tab         key.Binding
+	Back        key.Binding
+	Enter       key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Quit}
+	return []key.Binding{k.HelpPage, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right}, // first column
-		{k.Help, k.Setting, k.Quit},     // second column
-		{k.Tab, k.Enter},                // second column
+		{k.Up, k.Down, k.Left, k.Right},     // first column
+		{k.HelpPage, k.SettingPage, k.Quit}, // second column
+		{k.Tab, k.Enter},                    // second column
 	}
 }
 
@@ -50,7 +50,7 @@ var AppKeyMap = KeyMap{
 		key.WithKeys("right", "d"),
 		key.WithHelp("→ / d", "下一页"),
 	),
-	Help: key.NewBinding(
+	HelpPage: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp(" ?", "查看帮助页面"),
 	),
@@ -58,7 +58,7 @@ var AppKeyMap = KeyMap{
 		key.WithKeys("ctrl+b", "backspace"),
 		key.WithHelp("ctrl+b / 删除键", "返回上一页"),
 	),
-	Setting: key.NewBinding(
+	SettingPage: key.NewBinding(
 		key.WithKeys("`"),
 		key.WithHelp("`", "反引号进入配置页面"),
 	),

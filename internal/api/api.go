@@ -1,25 +1,21 @@
-package http
+package api
 
 import (
 	"io"
 	"time"
 
+	"github.com/seth-shi/go-v2ex/internal/types"
+
 	"github.com/go-resty/resty/v2"
-	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	V2exClient = newClient()
+	Client = newClient()
 )
 
 type v2exClient struct {
 	client *resty.Client
-}
-
-type apiError struct {
-	Message string `json:"message"`
-	Success bool   `json:"success"`
 }
 
 func newClient() *v2exClient {
@@ -35,7 +31,7 @@ func newClient() *v2exClient {
 	}
 }
 
-func (client *v2exClient) SetConfig(cfg config.FileConfig) *v2exClient {
+func (client *v2exClient) SetConfig(cfg types.FileConfig) *v2exClient {
 
 	client.client.SetTimeout(time.Second * time.Duration(cfg.Timeout))
 	client.client.SetAuthToken(cfg.Token)

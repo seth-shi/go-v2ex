@@ -1,10 +1,13 @@
 package messages
 
 import (
-	"github.com/seth-shi/go-v2ex/internal/config"
+	"github.com/seth-shi/go-v2ex/internal/types"
 )
 
-type UiMessageInit struct {
-	Config *config.FileConfig
+type LoadConfigRequest struct {
+}
+
+type LoadConfigResult struct {
+	Config types.FileConfig
 	Error  error
 }

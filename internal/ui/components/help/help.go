@@ -2,12 +2,9 @@ package help
 
 import (
 	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/ui/context"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
 type Model struct {
@@ -15,7 +12,7 @@ type Model struct {
 	help help.Model
 }
 
-func New(ctx *context.Data) Model {
+func New() Model {
 	helpModel := help.New()
 	helpModel.ShowAll = true
 	m := Model{
@@ -31,17 +28,6 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
-	switch typeMsg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(typeMsg, consts.AppKeyMap.Back):
-			return m, func() tea.Msg {
-				return messages.GoToHome{}
-			}
-		}
-	}
-
 	return m, nil
 }
 

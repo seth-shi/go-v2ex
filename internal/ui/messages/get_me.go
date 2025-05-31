@@ -1,10 +1,13 @@
 package messages
 
 import (
-	"github.com/seth-shi/go-v2ex/internal/resources"
+	"github.com/seth-shi/go-v2ex/internal/types"
 )
 
-type GetMe struct {
-	Member *resources.MemberResult
+type GetMeRequest struct {
+}
+
+type GetMeResult struct {
+	Member *types.V2MemberResult
 	Error  error
 }

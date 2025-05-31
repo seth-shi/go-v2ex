@@ -1,6 +1,11 @@
-package resources
+package types
 
-type MemberResult struct {
+type V2MemberResponse struct {
+	v2ApiError
+	Result *V2MemberResult `json:"result"`
+}
+
+type V2MemberResult struct {
 	Id             int    `json:"id"`
 	Username       string `json:"username"`
 	Url            string `json:"url"`

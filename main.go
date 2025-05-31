@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dromara/carbon/v2"
 	"github.com/samber/lo"
@@ -13,8 +15,10 @@ func init() {
 }
 func main() {
 
-	f := lo.Must1(tea.LogToFile("debug.log", "debug"))
-	defer f.Close()
+	if len(os.Getenv("DEBUG")) > 0 {
+		f := lo.Must1(tea.LogToFile("debug.log", "debug"))
+		defer f.Close()
+	}
 
 	lo.Must1(tea.NewProgram(ui.NewModel()).Run())
 }
