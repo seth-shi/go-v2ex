@@ -57,6 +57,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.Tips:
 		m.leftText = msgType.Text
 		return m, nil
+	case messages.GetTopicsResult:
+		// 这里删除一下, 防止切换页面 loading 监听不到
+		delete(m.loadings, messages.LoadingRequestTopics.End.ID)
+		return m, nil
 	case error:
 		return m, m.addError(msgType)
 	case messages.ClearErrorRequest:

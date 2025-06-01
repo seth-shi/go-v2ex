@@ -54,11 +54,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// 全局监听, 无需转给子组件
 	case messages.LoadConfigResult:
 		return m, m.onConfigLoaded(msgType.Error)
-	case messages.SettingSaveResult:
-		return m, m.onConfigLoaded(nil)
 	case messages.RedirectPageRequest:
 		m.currBodyModel = msgType.Page
-		// 如果跳转到列表页, 在这里发送消息才能收到
+		// 先切换到列表页面, 再发送消息去请求数据
 		var cmd tea.Cmd
 		if reflect.DeepEqual(m.currBodyModel, routes.TopicsModel) {
 			cmd = messages.Post(messages.GetTopicsRequest{Page: 1})

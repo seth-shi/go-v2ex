@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/config"
@@ -52,9 +50,6 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 			// 这两个接口不支持分页, 手动切分
 			offset := (page - 1) * latestLimit
 			v1Res = lo.Slice(v1Res, offset, offset+latestLimit)
-			log.Println(uri)
-			log.Println(offset)
-			log.Println(v1Res)
 			// 转换成统一的输出
 			res = lo.Map(v1Res, func(item types.V1TopicResult, index int) types.TopicComResult {
 				return types.TopicComResult{
@@ -91,5 +86,4 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 			Error:  err,
 		}
 	}
-
 }
