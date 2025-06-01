@@ -26,12 +26,11 @@ stateDiagram-v2
 
 ## 预览图
 
-![配置页面](assets/1.png)
-![帮助页面](assets/2.png)
+![列表页](assets/1.png)
 
 ## 安装使用 (TODO)
 
-* `go install xxx`
+* `go install github.com/seth-shi/go-v2ex@latest`
 * 去发布页面下载二进制文件
 
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
@@ -41,8 +42,7 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 
 		r := client.client.R().SetContext(context.Background())
 		switch nodeName {
-		case latestNode:
-		case hotNode:
+		case latestNode, hotNode:
 			uri = lo.If(nodeName == latestNode, latestUri).Else(hotUri)
 			_, err = r.SetResult(&v1Res).SetError(&v1Error).Get(uri)
 			if !v1Error.Success() {
@@ -52,6 +52,9 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 			// 这两个接口不支持分页, 手动切分
 			offset := (page - 1) * latestLimit
 			v1Res = lo.Slice(v1Res, offset, offset+latestLimit)
+			log.Println(uri)
+			log.Println(offset)
+			log.Println(v1Res)
 			// 转换成统一的输出
 			res = lo.Map(v1Res, func(item types.V1TopicResult, index int) types.TopicComResult {
 				return types.TopicComResult{
