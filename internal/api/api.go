@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/seth-shi/go-v2ex/internal/types"
+	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
@@ -31,9 +31,9 @@ func newClient() *v2exClient {
 	}
 }
 
-func (client *v2exClient) SetConfig(cfg types.FileConfig) *v2exClient {
+func (client *v2exClient) RefreshConfig() *v2exClient {
 
-	client.client.SetTimeout(time.Second * time.Duration(cfg.Timeout))
-	client.client.SetAuthToken(cfg.Token)
+	client.client.SetTimeout(time.Second * time.Duration(config.G.Timeout))
+	client.client.SetAuthToken(config.G.Token)
 	return client
 }

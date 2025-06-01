@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/seth-shi/go-v2ex/internal/config"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,7 +18,7 @@ import (
 )
 
 const (
-	rightText = "go-v2ex Powered by seth-shi"
+	rightText = "go-v2ex@v1.0.0 Powered by seth-shi"
 )
 
 type Model struct {
@@ -28,7 +30,6 @@ type Model struct {
 	loadings map[int]string
 	errors   []string
 	spinner  spinner.Model
-	screen   types.ScreenSize
 }
 
 func New() Model {
@@ -48,28 +49,25 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch typeMsg := msg.(type) {
+	switch msgType := msg.(type) {
 	case messages.StartLoading:
-		m.loadings[typeMsg.ID] = typeMsg.Text
+		m.loadings[msgType.ID] = msgType.Text
 		return m, nil
 	case messages.EndLoading:
-		delete(m.loadings, typeMsg.ID)
+		delete(m.loadings, msgType.ID)
 		return m, nil
 	case error:
-		return m, m.addError(typeMsg)
+		return m, m.addError(msgType)
 	case messages.ClearErrorRequest:
 		// 删除第一个元素
 		m.errors = lo.Slice(m.errors, 1, len(m.errors))
 		return m, nil
 	case messages.GetTopicsResult:
-		m.topicsPage = typeMsg.Page
-		return m, nil
-	case tea.WindowSizeMsg:
-		m.screen.Sync(typeMsg)
+		m.topicsPage = msgType.Page
 		return m, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(typeMsg)
+		m.spinner, cmd = m.spinner.Update(msgType)
 		return m, cmd
 	}
 
@@ -109,19 +107,22 @@ func (m Model) View() string {
 	}
 
 	padding := 1
-	footer := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		leftSection.Render(),
-		lipgloss.PlaceHorizontal(
-			m.screen.Width-lipgloss.Width(leftSection.String())-2*padding,
-			lipgloss.Right,
-			rightSection.Render(),
-		),
-	)
+	footer := leftSection.Render()
+	if config.G.ShowFooter {
+		footer = lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			leftSection.Render(),
+			lipgloss.PlaceHorizontal(
+				config.Screen.Width-lipgloss.Width(leftSection.String())-2*padding,
+				lipgloss.Right,
+				rightSection.Render(),
+			),
+		)
+	}
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, true, false).
-		Width(m.screen.Width).
+		Width(config.Screen.Width).
 		PaddingLeft(padding).
 		PaddingRight(padding).
 		Render(footer)

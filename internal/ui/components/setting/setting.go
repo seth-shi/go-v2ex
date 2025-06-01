@@ -2,15 +2,13 @@ package setting
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/seth-shi/go-v2ex/internal/types"
+	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
 var (
@@ -28,7 +26,6 @@ var (
 
 type Model struct {
 	focusIndex int
-	config     types.FileConfig
 	inputs     []textinput.Model
 }
 
@@ -64,23 +61,23 @@ func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m Model) SetConfig(cfg types.FileConfig) {
-	m.config = cfg
+func (m Model) RefreshConfig() {
+	// 当前不在 body 页, 无法通过消息更新
 	if len(m.inputs) > 0 {
-		m.inputs[0].SetValue(m.config.Token)
+		m.inputs[0].SetValue(config.G.Token)
 	}
 
 	if len(m.inputs) > 1 {
-		m.inputs[1].SetValue(m.config.Nodes)
+		m.inputs[1].SetValue(config.G.Nodes)
 	}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch msgType := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
+		switch msgType.String() {
 		case "tab", "shift+tab", "enter", "up", "down":
-			s := msg.String()
+			s := msgType.String()
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
@@ -116,7 +113,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs[i].TextStyle = noStyle
 			}
 
-			// TODO 清楚所有错误
 			return m, tea.Batch(cmds...)
 		}
 	}
@@ -141,31 +137,22 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 
 func (m Model) saveSettings() tea.Cmd {
 	if len(m.inputs) > 0 {
-		m.config.Token = strings.TrimSpace(m.inputs[0].Value())
+		config.G.Token = strings.TrimSpace(m.inputs[0].Value())
 	}
 
 	if len(m.inputs) > 1 {
-		m.config.Nodes = strings.TrimSpace(m.inputs[1].Value())
+		config.G.Nodes = strings.TrimSpace(m.inputs[1].Value())
 	}
 
-	// 保存数据
-	if err := m.config.SaveToFile(); err != nil {
-		// 停留在此页面
-		return messages.Post(err)
-	}
-
-	return messages.Post(messages.SettingSaveResult{Config: m.config})
+	return config.SaveToFile
 }
 
 func (m Model) View() string {
 	var b strings.Builder
 
-	log.Println("setting")
-	log.Println(m.config)
-
 	text := fmt.Sprintf(
 		"配置文件路径:%s",
-		m.config.ConfigPath(),
+		config.SavePath(),
 	)
 	b.WriteString(tipStyle.Render(text))
 

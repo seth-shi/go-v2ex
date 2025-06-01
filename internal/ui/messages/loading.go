@@ -6,7 +6,6 @@ import (
 
 var (
 	lastLoadingId        int64
-	LoadingLoadConfigKey = newLoadingKey("加载配置中")
 	LoadingRequestMe     = newLoadingKey("获取个人信息中")
 	LoadingRequestTopics = newLoadingKey("获取主题中")
 )

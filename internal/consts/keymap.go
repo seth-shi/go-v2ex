@@ -5,16 +5,17 @@ import (
 )
 
 type KeyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	Left        key.Binding
-	Right       key.Binding
-	HelpPage    key.Binding
-	SettingPage key.Binding
-	Quit        key.Binding
-	Tab         key.Binding
-	Back        key.Binding
-	Enter       key.Binding
+	Up             key.Binding
+	Down           key.Binding
+	Left           key.Binding
+	Right          key.Binding
+	HelpPage       key.Binding
+	SettingPage    key.Binding
+	Quit           key.Binding
+	Tab            key.Binding
+	Back           key.Binding
+	Enter          key.Binding
+	SwitchShowMode key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
@@ -29,7 +30,8 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},     // first column
 		{k.HelpPage, k.SettingPage, k.Quit}, // second column
-		{k.Tab, k.Enter},                    // second column
+		{k.Tab, k.Enter},
+		{k.SwitchShowMode},
 	}
 }
 
@@ -73,5 +75,9 @@ var AppKeyMap = KeyMap{
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "查看主题详情"),
+	),
+	SwitchShowMode: key.NewBinding(
+		key.WithKeys("-"),
+		key.WithHelp("-", "(减号)切换顶部底部显示隐藏"),
 	),
 }

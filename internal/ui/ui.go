@@ -1,15 +1,17 @@
 package ui
 
 import (
+	"reflect"
 	"strings"
+
+	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/api"
-	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/types"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/footer"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/header"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
@@ -20,7 +22,6 @@ type Model struct {
 	currBodyModel tea.Model
 	headerModel   tea.Model
 	footerModel   tea.Model
-	screen        types.ScreenSize
 }
 
 func NewModel() Model {
@@ -34,39 +35,42 @@ func NewModel() Model {
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
-		messages.Post(messages.LoadConfigRequest{}),
+		// 加载配置
+		config.LoadFileConfig,
 		// 其它不要用 init 初始化, 使用消息去刷新
 		m.headerModel.Init(),
-		m.footerModel.Init(),
 		m.currBodyModel.Init(),
+		m.footerModel.Init(),
 	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch typeMsg := msg.(type) {
-	// 全局监听, 并且子组件也需要监听的事件
+	switch msgType := msg.(type) {
+	// 全局监听, 让子组件更新
 	case tea.WindowSizeMsg:
-		m.screen.Sync(typeMsg)
+		config.Screen.Width = msgType.Width
+		config.Screen.Height = msgType.Height
 	// 全局监听, 无需转给子组件
 	case messages.LoadConfigResult:
-		return m, tea.Batch(messages.Post(messages.LoadingLoadConfigKey.End), m.onConfigLoaded(typeMsg.Config, typeMsg.Error))
-	case messages.LoadConfigRequest:
-		return m, tea.Batch(messages.Post(messages.LoadingLoadConfigKey.Start), config.LoadFileConfig)
+		return m, m.onConfigLoaded(msgType.Error)
 	case messages.SettingSaveResult:
-		return m, m.onConfigLoaded(typeMsg.Config, nil)
+		return m, m.onConfigLoaded(nil)
 	case messages.RedirectPageRequest:
-		m.currBodyModel = typeMsg.Page
+		m.currBodyModel = msgType.Page
 		return m, nil
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(typeMsg, consts.AppKeyMap.SettingPage):
-			return m, messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
-		case key.Matches(typeMsg, consts.AppKeyMap.HelpPage):
-			return m, messages.Post(messages.RedirectPageRequest{Page: routes.HelpModel})
-		case key.Matches(typeMsg, consts.AppKeyMap.Back):
+		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
+			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
+		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
+			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
+		case key.Matches(msgType, consts.AppKeyMap.Back):
 			return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
-		case key.Matches(typeMsg, consts.AppKeyMap.Quit):
+		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
+			config.G.SwitchShowMode()
+			return m, config.SaveToFile
+		case key.Matches(msgType, consts.AppKeyMap.Quit):
 			return m, tea.Quit
 		}
 	}
@@ -98,24 +102,24 @@ func (m Model) View() string {
 
 	// 底部增加一个 padding, 来固定在底部
 	ff := m.footerModel.View()
-	paddingTop := m.screen.Height - lipgloss.Height(output.String()) - lipgloss.Height(ff)
+	paddingTop := config.Screen.Height - lipgloss.Height(output.String()) - lipgloss.Height(ff)
 	output.WriteString(lipgloss.NewStyle().PaddingTop(paddingTop).Render(ff))
 
 	return output.String()
 }
 
-func (m Model) onConfigLoaded(config types.FileConfig, err error) tea.Cmd {
+func (m Model) onConfigLoaded(err error) tea.Cmd {
 
 	if err != nil {
 		return messages.Post(err)
 	}
 
 	// 把配置注入到其他页面
-	api.Client.SetConfig(config)
-	routes.SettingModel.SetConfig(config)
+	api.Client.RefreshConfig()
+	routes.SettingModel.RefreshConfig()
 
 	// 第一次没 token 去配置页面
-	if config.Token == "" {
+	if config.G.Token == "" {
 		return messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
 	}
 
