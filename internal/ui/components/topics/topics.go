@@ -36,7 +36,7 @@ type Model struct {
 	activeTab   int
 	page        int
 	requesting  bool
-	topics      []types.V1TopicResult
+	topics      []types.TopicComResult
 }
 
 func New() Model {
@@ -172,20 +172,20 @@ func (m Model) renderTables() string {
 	for i, topic := range m.topics {
 
 		// 设置列自适应宽度
-		if len(topic.Node.Title) > columnWidth[1] {
+		if len(topic.Node) > columnWidth[1] {
 			// lipgloss.Width 处理中文, len 处理空格
-			columnWidth[1] = max(lipgloss.Width(topic.Node.Title), len(topic.Node.Title))
+			columnWidth[1] = max(lipgloss.Width(topic.Node), len(topic.Node))
 		}
-		if len(topic.Member.Username) > columnWidth[3] {
-			columnWidth[3] = max(lipgloss.Width(topic.Member.Username), len(topic.Member.Username))
+		if len(topic.Member) > columnWidth[3] {
+			columnWidth[3] = max(lipgloss.Width(topic.Member), len(topic.Member))
 		}
 
 		rows = append(
 			rows, []string{
 				strconv.Itoa(i + 1),
-				topic.Node.Title,
+				topic.Node,
 				topic.Title,
-				topic.Member.Username,
+				topic.Member,
 				carbon.CreateFromTimestamp(topic.LastTouched).String(),
 				strconv.Itoa(topic.Replies),
 			},

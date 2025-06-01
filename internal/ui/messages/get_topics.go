@@ -10,7 +10,7 @@ type GetTopicsRequest struct {
 }
 
 type GetTopicsResult struct {
-	Topics []types.V1TopicResult
+	Topics []types.TopicComResult
 	Page   int
 	Error  error
 }
