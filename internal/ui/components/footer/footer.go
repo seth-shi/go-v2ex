@@ -13,7 +13,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/types"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
@@ -24,11 +23,10 @@ const (
 type Model struct {
 	focusIndex int
 	// 数据
-	me         *types.V2MemberResult
-	topicsPage int
 	// 只在 update view 读写, 无需上锁
 	loadings map[int]string
 	errors   []string
+	leftText string
 	spinner  spinner.Model
 }
 
@@ -56,14 +54,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.EndLoading:
 		delete(m.loadings, msgType.ID)
 		return m, nil
+	case messages.Tips:
+		m.leftText = msgType.Text
+		return m, nil
 	case error:
 		return m, m.addError(msgType)
 	case messages.ClearErrorRequest:
 		// 删除第一个元素
 		m.errors = lo.Slice(m.errors, 1, len(m.errors))
-		return m, nil
-	case messages.GetTopicsResult:
-		m.topicsPage = msgType.Page
 		return m, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -77,15 +75,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		leftSection  = ""
+		leftSection  []string
 		rightSection = lipgloss.NewStyle().SetString(rightText)
 	)
 
-	if len(m.errors) > 0 || len(m.loadings) > 0 {
+	if len(m.errors) > 0 || len(m.loadings) > 0 || m.leftText != "" {
 
-		leftSection = lipgloss.NewStyle().
+		if m.leftText != "" {
+			leftSection = append(leftSection, m.leftText)
+		}
+
+		leftSection = append(leftSection, lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#ff5722")).
-			Render(strings.Join(m.errors, " / "))
+			Render(strings.Join(m.errors, " / ")))
 
 		loadingKeys := lo.Keys(m.loadings)
 		slices.Sort(loadingKeys)
@@ -98,22 +100,21 @@ func (m Model) View() string {
 				m.loadings[key],
 			)
 		})
-		leftSection += lipgloss.NewStyle().Render(strings.Join(loadingText, ""))
-	} else if m.topicsPage > 0 {
-		leftSection = lipgloss.NewStyle().Render(fmt.Sprintf("第%d页", m.topicsPage))
+		leftSection = append(leftSection, lipgloss.NewStyle().Render(strings.Join(loadingText, "")))
 	} else {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
-		leftSection = lipgloss.NewStyle().Render(fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
+		leftSection = append(leftSection, fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
 	}
 
 	padding := 1
-	footer := leftSection
+	leftContent := strings.Join(leftSection, " ")
+	footer := leftContent
 	if config.G.ShowFooter {
 		footer = lipgloss.JoinHorizontal(
 			lipgloss.Top,
-			leftSection,
+			leftContent,
 			lipgloss.PlaceHorizontal(
-				config.Screen.Width-lipgloss.Width(leftSection)-2*padding,
+				config.Screen.Width-lipgloss.Width(leftContent)-2*padding,
 				lipgloss.Right,
 				rightSection.Render(),
 			),

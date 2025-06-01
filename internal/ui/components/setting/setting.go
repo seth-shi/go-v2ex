@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+
 	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -98,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focusIndex = len(m.inputs)
 			}
 
-			cmds := make([]tea.Cmd, len(m.inputs))
+			cmds := make([]tea.Cmd, len(m.inputs)+1)
 			for i := 0; i <= len(m.inputs)-1; i++ {
 				if i == m.focusIndex {
 					// Set focused state
@@ -113,6 +115,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs[i].TextStyle = noStyle
 			}
 
+			cmds = append(cmds, messages.Post(messages.Tips{Text: ""}))
 			return m, tea.Batch(cmds...)
 		}
 	}

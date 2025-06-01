@@ -70,8 +70,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
 		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
 			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
-		case key.Matches(msgType, consts.AppKeyMap.Back):
-			return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
+		//case key.Matches(msgType, consts.AppKeyMap.Back):
+		//	return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
 			config.G.SwitchShowMode()
 			return m, config.SaveToFile

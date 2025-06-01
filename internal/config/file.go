@@ -26,7 +26,7 @@ var (
 
 type fileConfig struct {
 	Token      string `json:"personal_access_token"`
-	Nodes      string `json:"nodes" default:"latest,hot"`
+	Nodes      string `json:"nodes" default:"latest,hot,tech,apple,jobs,deals,beijing,qna"`
 	Timeout    uint   `json:"timeout" default:"5"`
 	ShowHeader bool   `json:"show_header" default:"true"`
 	ShowFooter bool   `json:"show_footer" default:"true"`
@@ -76,7 +76,11 @@ func SaveToFile() tea.Msg {
 		return err
 	}
 
-	return os.WriteFile(SavePath(), bytesData, 0644)
+	if err = os.WriteFile(SavePath(), bytesData, 0644); err != nil {
+		return err
+	}
+
+	return messages.Tips{Text: "配置保存成功"}
 }
 
 func SavePath() string {

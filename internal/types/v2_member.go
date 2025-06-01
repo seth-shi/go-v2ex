@@ -1,7 +1,7 @@
 package types
 
 type V2MemberResponse struct {
-	v2ApiError
+	V2ApiError
 	Result *V2MemberResult `json:"result"`
 }
 
