@@ -5,7 +5,8 @@ import (
 )
 
 type GetTopicsRequest struct {
-	Page int
+	Page      int
+	NodeIndex int
 }
 
 type GetTopicsResult struct {

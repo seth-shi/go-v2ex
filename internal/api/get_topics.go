@@ -10,7 +10,7 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
-func GetTopics(page int) tea.Cmd {
+func GetTopics(nodeIndex int, page int) tea.Cmd {
 	return func() tea.Msg {
 
 		time.Sleep(time.Second * 1)

@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cellStyle   = lipgloss.NewStyle().Padding(0, 1).Width(5).Foreground(lipgloss.Color("#c2c2c2"))
+	cellStyle   = lipgloss.NewStyle().Padding(0, 1).Width(5)
 	tableStyles = map[int]lipgloss.Style{
 		0: cellStyle.Width(4).Align(lipgloss.Left),
 		1: cellStyle.Width(10).Align(lipgloss.Left),
@@ -58,7 +58,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.GetTopicsRequest:
 		m.topicsPage = msgType.Page
 		m.requesting = true
-		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(msgType.Page))
+		// 默认进来是要给节点
+		m.activeTab = msgType.NodeIndex
+		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(msgType.NodeIndex, msgType.Page))
 	case messages.GetTopicsResult:
 		m.topics = msgType.Topics
 		m.requesting = false
@@ -74,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.activeTab >= len(config.G.GetNodes()) {
 				m.activeTab = 0
 			}
-			return m, nil
+			return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(m.activeTab, m.topicsPage))
 		}
 
 		switch msgType.Type {
@@ -86,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyDown:
 			m.activeIndex++
-			if m.activeIndex > len(m.topics) {
+			if m.activeIndex >= len(m.topics) {
 				m.activeIndex = 0
 			}
 			return m, nil
@@ -94,13 +96,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.topicsPage > 0 {
 				m.topicsPage--
 				m.requesting = true
-				return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(m.topicsPage))
+				return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(m.activeTab, m.topicsPage))
 			}
 			return m, nil
 		case tea.KeyRight:
 			m.topicsPage++
 			m.requesting = true
-			return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(m.topicsPage))
+			return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(m.activeTab, m.topicsPage))
 		default:
 			return m, nil
 		}
@@ -111,6 +113,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 
+	var (
+		doc strings.Builder
+	)
+	doc.WriteString(m.renderTabs())
+	doc.WriteString(m.renderTables())
+	return doc.String()
+}
+
+func (m Model) renderTabs() string {
 	var (
 		doc          strings.Builder
 		renderedTabs []string
@@ -142,9 +153,12 @@ func (m Model) View() string {
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
 	doc.WriteString("\n")
+	return doc.String()
+}
 
+func (m Model) renderTables() string {
 	if len(m.topics) == 0 {
-		return doc.String()
+		return ""
 	}
 	// 表格
 	var rows [][]string
@@ -185,7 +199,7 @@ func (m Model) View() string {
 				}
 
 				if row == m.activeIndex {
-					style = style.Foreground(lipgloss.Color("#000000")).Bold(true)
+					style = style.Foreground(lipgloss.Color("#1e9fff")).Bold(true)
 					rows[row][0] = "*"
 				}
 
@@ -194,8 +208,7 @@ func (m Model) View() string {
 		).
 		Headers("#", "node", "title", "member", "last_touched", "replies").
 		Rows(rows...)
-	doc.WriteString(t.String())
-	return doc.String()
+	return t.String()
 }
 
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
