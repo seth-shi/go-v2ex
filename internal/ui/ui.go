@@ -58,7 +58,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.onConfigLoaded(nil)
 	case messages.RedirectPageRequest:
 		m.currBodyModel = msgType.Page
-		return m, nil
+		// 如果跳转到列表页, 在这里发送消息才能收到
+		var cmd tea.Cmd
+		if reflect.DeepEqual(m.currBodyModel, routes.TopicsModel) {
+			cmd = messages.Post(messages.GetTopicsRequest{Page: 1})
+		}
+		return m, cmd
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
@@ -126,7 +131,6 @@ func (m Model) onConfigLoaded(err error) tea.Cmd {
 	// 去触发对应的地方获取数据
 	return tea.Batch(
 		messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}),
-		messages.Post(messages.GetTopicsRequest{Page: 1}),
 		messages.Post(messages.GetMeRequest{}),
 	)
 }

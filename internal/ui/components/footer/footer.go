@@ -77,16 +77,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		leftSection  = lipgloss.NewStyle()
+		leftSection  = ""
 		rightSection = lipgloss.NewStyle().SetString(rightText)
 	)
 
-	// 如果有错误
-	if len(m.errors) > 0 {
-		leftSection = leftSection.
+	if len(m.errors) > 0 || len(m.loadings) > 0 {
+
+		leftSection = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#ff5722")).
-			SetString(strings.Join(m.errors, "--"))
-	} else if len(m.loadings) > 0 {
+			Render(strings.Join(m.errors, " / "))
+
 		loadingKeys := lo.Keys(m.loadings)
 		slices.Sort(loadingKeys)
 		loadingText := lo.Map(loadingKeys, func(key int, index int) string {
@@ -98,22 +98,22 @@ func (m Model) View() string {
 				m.loadings[key],
 			)
 		})
-		leftSection = leftSection.SetString(strings.Join(loadingText, ""))
+		leftSection += lipgloss.NewStyle().Render(strings.Join(loadingText, ""))
 	} else if m.topicsPage > 0 {
-		leftSection = leftSection.SetString(fmt.Sprintf("第%d页", m.topicsPage))
+		leftSection = lipgloss.NewStyle().Render(fmt.Sprintf("第%d页", m.topicsPage))
 	} else {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
-		leftSection = leftSection.SetString(fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
+		leftSection = lipgloss.NewStyle().Render(fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
 	}
 
 	padding := 1
-	footer := leftSection.Render()
+	footer := leftSection
 	if config.G.ShowFooter {
 		footer = lipgloss.JoinHorizontal(
 			lipgloss.Top,
-			leftSection.Render(),
+			leftSection,
 			lipgloss.PlaceHorizontal(
-				config.Screen.Width-lipgloss.Width(leftSection.String())-2*padding,
+				config.Screen.Width-lipgloss.Width(leftSection)-2*padding,
 				lipgloss.Right,
 				rightSection.Render(),
 			),

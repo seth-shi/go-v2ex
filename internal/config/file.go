@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mcuadros/go-defaults"
@@ -51,6 +52,10 @@ func (c *fileConfig) SwitchShowMode() {
 		c.ShowHeader = false
 		c.ShowFooter = false
 	}
+}
+
+func (c *fileConfig) GetNodes() []string {
+	return strings.Split(c.Nodes, ",")
 }
 
 func LoadFileConfig() tea.Msg {

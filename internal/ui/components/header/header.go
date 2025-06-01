@@ -11,8 +11,8 @@ import (
 )
 
 type Model struct {
-	me       *types.V2MemberResult
-	leftText *string
+	me        *types.V2MemberResult
+	rightText *string
 }
 
 func New() Model {
@@ -25,22 +25,17 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch typeMsg := msg.(type) {
-	case messages.StartLoading:
-		if typeMsg == messages.LoadingRequestMe.Start {
-			m.leftText = lo.ToPtr("登录中...")
-		}
-		return m, nil
-	case messages.EndLoading:
-		if typeMsg == messages.LoadingRequestMe.End {
-			m.leftText = nil
-		}
-		return m, nil
+	switch msgType := msg.(type) {
 	case messages.GetMeRequest:
+		m.rightText = lo.ToPtr("登录中...")
 		return m, tea.Batch(messages.Post(messages.LoadingRequestMe.Start), api.Client.GetMember)
 	case messages.GetMeResult:
-		m.me = typeMsg.Member
-		return m, tea.Batch(messages.Post(messages.LoadingRequestMe.End), messages.Post(typeMsg.Error))
+		m.me = msgType.Member
+		m.rightText = nil
+		if msgType.Error != nil {
+			m.rightText = lo.ToPtr("登录失败")
+		}
+		return m, tea.Batch(messages.Post(messages.LoadingRequestMe.End), messages.Post(msgType.Error))
 	}
 
 	return m, nil
@@ -57,7 +52,7 @@ func (m Model) View() string {
 
 		var (
 			leftText  = ""
-			rightText = lo.FromPtr(m.leftText)
+			rightText = lo.FromPtr(m.rightText)
 		)
 
 		if m.me != nil {

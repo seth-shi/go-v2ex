@@ -1,7 +1,13 @@
 package topics
 
 import (
+	"errors"
 	"strconv"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/seth-shi/go-v2ex/internal/config"
+	"github.com/seth-shi/go-v2ex/internal/consts"
 
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/types"
@@ -20,24 +26,25 @@ var (
 		1: cellStyle.Width(10).Align(lipgloss.Left),
 		3: cellStyle.Width(20).Align(lipgloss.Left),
 		4: cellStyle.Width(22).Align(lipgloss.Left),
-		5: cellStyle.Width(3).Align(lipgloss.Center),
+		5: cellStyle.Width(7).Align(lipgloss.Center),
 	}
-	headerStyle = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
+	headerStyle       = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
+	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
+	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).Padding(0, 1)
+	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
 )
 
 type Model struct {
-	selectedIndex int
-	topicsPage    int
-	requesting    bool
-	topics        []*types.TopicResource
-	screenHeight  int
-	screenWidth   int
+	activeIndex int
+	activeTab   int
+	topicsPage  int
+	requesting  bool
+	topics      []*types.TopicResource
 }
 
 func New() Model {
-	return Model{
-		selectedIndex: 0,
-	}
+	return Model{}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -46,37 +53,41 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch typeMsg := msg.(type) {
+	switch msgType := msg.(type) {
 	// 其它地方负责回调这里去请求数据,
 	case messages.GetTopicsRequest:
-		m.topicsPage = typeMsg.Page
+		m.topicsPage = msgType.Page
 		m.requesting = true
-		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(typeMsg.Page))
+		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.GetTopics(msgType.Page))
 	case messages.GetTopicsResult:
-		m.topics = typeMsg.Topics
+		m.topics = msgType.Topics
 		m.requesting = false
-		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.End), messages.Post(typeMsg.Error))
-	case tea.WindowSizeMsg:
-		m.screenHeight = typeMsg.Height
-		m.screenWidth = typeMsg.Width
-		return m, nil
+		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.End), messages.Post(msgType.Error))
 	case tea.KeyMsg:
 		// 如果在请求中, 不处理键盘事件
 		if m.requesting {
+			return m, messages.Post(errors.New("请求中"))
+		}
+
+		if key.Matches(msgType, consts.AppKeyMap.Tab) {
+			m.activeTab++
+			if m.activeTab >= len(config.G.GetNodes()) {
+				m.activeTab = 0
+			}
 			return m, nil
 		}
 
-		switch typeMsg.Type {
+		switch msgType.Type {
 		case tea.KeyUp:
-			m.selectedIndex--
-			if m.selectedIndex < 0 {
-				m.selectedIndex = max(0, len(m.topics)-1)
+			m.activeIndex--
+			if m.activeIndex < 0 {
+				m.activeIndex = max(0, len(m.topics)-1)
 			}
 			return m, nil
 		case tea.KeyDown:
-			m.selectedIndex++
-			if m.selectedIndex > len(m.topics) {
-				m.selectedIndex = 0
+			m.activeIndex++
+			if m.activeIndex > len(m.topics) {
+				m.activeIndex = 0
 			}
 			return m, nil
 		case tea.KeyLeft:
@@ -100,10 +111,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 
-	if len(m.topics) == 0 {
-		return ""
+	var (
+		doc          strings.Builder
+		renderedTabs []string
+		tabs         = config.G.GetNodes()
+	)
+
+	for i, t := range tabs {
+		var style lipgloss.Style
+		isFirst, isLast, isActive := i == 0, i == len(tabs)-1, i == m.activeTab
+		if isActive {
+			style = activeTabStyle
+		} else {
+			style = inactiveTabStyle
+		}
+		border, _, _, _, _ := style.GetBorder()
+		if isFirst && isActive {
+			border.BottomLeft = "│"
+		} else if isFirst && !isActive {
+			border.BottomLeft = "├"
+		} else if isLast && isActive {
+			border.BottomRight = "│"
+		} else if isLast && !isActive {
+			border.BottomRight = "┤"
+		}
+		style = style.Border(border)
+		renderedTabs = append(renderedTabs, style.Render(t))
 	}
 
+	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+	doc.WriteString(row)
+	doc.WriteString("\n")
+
+	if len(m.topics) == 0 {
+		return doc.String()
+	}
+	// 表格
 	var rows [][]string
 	for i := 0; i < len(m.topics); i++ {
 		topic := m.topics[0]
@@ -118,7 +161,9 @@ func (m Model) View() string {
 			},
 		)
 	}
-	titleWidth := m.screenWidth
+
+	// len(tableStyles) + 1 = 列数 (再 +1 等于边框数)
+	titleWidth := config.Screen.Width - (len(tableStyles) + 1 + 1)
 	for _, v := range tableStyles {
 		titleWidth -= v.GetWidth()
 	}
@@ -139,7 +184,7 @@ func (m Model) View() string {
 					style = lipgloss.NewStyle().Width(titleWidth)
 				}
 
-				if row == m.selectedIndex {
+				if row == m.activeIndex {
 					style = style.Foreground(lipgloss.Color("#000000")).Bold(true)
 					rows[row][0] = "*"
 				}
@@ -147,7 +192,16 @@ func (m Model) View() string {
 				return style
 			},
 		).
-		Headers("#", "node", "title", "member", "created", "last_touched", "replies").
+		Headers("#", "node", "title", "member", "last_touched", "replies").
 		Rows(rows...)
-	return t.Render()
+	doc.WriteString(t.String())
+	return doc.String()
+}
+
+func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
+	border := lipgloss.RoundedBorder()
+	border.BottomLeft = left
+	border.Bottom = middle
+	border.BottomRight = right
+	return border
 }

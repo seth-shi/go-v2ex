@@ -12,6 +12,8 @@ import (
 
 func GetTopics(page int) tea.Cmd {
 	return func() tea.Msg {
+
+		time.Sleep(time.Second * 1)
 		var topics []*types.TopicResource
 		for i := 0; i < 10; i++ {
 			topic := types.GetDefaultTopic()
