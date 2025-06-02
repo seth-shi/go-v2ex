@@ -2,6 +2,8 @@ package api
 
 import (
 	"io"
+	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/seth-shi/go-v2ex/internal/config"
@@ -11,7 +13,9 @@ import (
 )
 
 var (
-	Client = newClient()
+	Client           = newClient()
+	LimitRemainCount = &atomic.Int64{}
+	LimitTotalCount  = &atomic.Int64{}
 )
 
 type v2exClient struct {
@@ -27,6 +31,19 @@ func newClient() *v2exClient {
 			New().
 			SetBaseURL("https://www.v2ex.com").
 			SetTimeout(time.Second * 10).
+			OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+
+				limit, err := strconv.ParseInt(r.Header().Get("x-rate-limit-limit"), 10, 64)
+				if err == nil {
+					LimitTotalCount.Store(limit)
+				}
+				remain, err := strconv.ParseInt(r.Header().Get("x-rate-limit-remaining"), 10, 64)
+				if err == nil {
+					LimitRemainCount.Store(remain)
+				}
+
+				return nil
+			}).
 			SetLogger(logger),
 	}
 }

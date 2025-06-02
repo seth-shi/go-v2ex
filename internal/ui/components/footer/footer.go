@@ -2,6 +2,8 @@ package footer
 
 import (
 	"fmt"
+	"github.com/seth-shi/go-v2ex/internal/api"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -132,12 +134,22 @@ func (m Model) View() string {
 		)
 	}
 
-	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, true, false).
+	var output strings.Builder
+	output.WriteString(lipgloss.NewStyle().
 		Width(config.Screen.Width).
 		PaddingLeft(padding).
 		PaddingRight(padding).
-		Render(footer)
+		Render(footer))
+
+	// 底部宽度
+	borderWidth := config.Screen.Width
+	if api.LimitTotalCount.Load() > 0 {
+		borderWidth = int(math.Ceil(float64(config.Screen.Width) * float64(api.LimitRemainCount.Load()) / float64(api.LimitTotalCount.Load())))
+	}
+	output.WriteString("\n")
+	output.WriteString(strings.Repeat("─", borderWidth))
+
+	return output.String()
 }
 
 func (m *Model) addAutoClearTips(text string) tea.Cmd {
