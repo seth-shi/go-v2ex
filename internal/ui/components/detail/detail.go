@@ -68,7 +68,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.canRequestReply = true
 		m.id = msgType.ID
 		m.replyPage = 1
-		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())+2)
+		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
 		// 开启定时器去获取评论列表
 		return m, tea.Batch(messages.Post(messages.ShowTipsRequest{Text: "按 n 更多评论 ←返回列表"}), m.getDetail(msgType.ID), m.getReply(msgType.ID))
 	case messages.GetDetailResult:

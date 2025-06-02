@@ -2,8 +2,9 @@ package setting
 
 import (
 	"fmt"
-	"github.com/seth-shi/go-v2ex/internal/api"
 	"strings"
+
+	"github.com/seth-shi/go-v2ex/internal/api"
 
 	"github.com/seth-shi/go-v2ex/internal/config"
 
@@ -22,7 +23,7 @@ var (
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("保存"))
 
 	tipStyle = lipgloss.NewStyle().
-		Padding(1, 1, 0, 1)
+			Padding(1, 1, 0, 1)
 )
 
 type Model struct {
