@@ -1,7 +1,7 @@
 package types
 
 type V1TopicResult struct {
-	Id              int    `json:"id"`
+	Id              int64  `json:"id"`
 	Title           string `json:"title"`
 	Url             string `json:"url"`
 	Content         string `json:"content"`

@@ -144,7 +144,7 @@ func (m Model) saveSettings() tea.Cmd {
 		config.G.Nodes = strings.TrimSpace(m.inputs[1].Value())
 	}
 
-	return config.SaveToFile
+	return config.SaveToFile("配置保存成功")
 }
 
 func (m Model) View() string {

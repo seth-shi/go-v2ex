@@ -13,13 +13,6 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
-const (
-	showHeader = 1
-	showFooter = 2
-	showAll    = 3
-	showEmpty  = 4
-)
-
 var (
 	G = newFileConfig()
 )
@@ -28,8 +21,8 @@ type fileConfig struct {
 	Token      string `json:"personal_access_token"`
 	Nodes      string `json:"nodes" default:"latest,hot,tech,apple,jobs,deals,beijing,qna"`
 	Timeout    uint   `json:"timeout" default:"5"`
-	ShowHeader bool   `json:"show_header" default:"true"`
 	ShowFooter bool   `json:"show_footer" default:"true"`
+	ActiveTab  int    `json:"active_tab"`
 }
 
 func newFileConfig() fileConfig {
@@ -39,19 +32,7 @@ func newFileConfig() fileConfig {
 }
 
 func (c *fileConfig) SwitchShowMode() {
-
-	if !c.ShowHeader && !c.ShowFooter {
-		c.ShowHeader = true
-	} else if c.ShowHeader && !c.ShowFooter {
-		c.ShowFooter = true
-		c.ShowHeader = false
-	} else if !c.ShowHeader && c.ShowFooter {
-		c.ShowHeader = true
-		c.ShowFooter = true
-	} else {
-		c.ShowHeader = false
-		c.ShowFooter = false
-	}
+	c.ShowFooter = !c.ShowFooter
 }
 
 func (c *fileConfig) GetNodes() []string {
@@ -70,17 +51,23 @@ func LoadFileConfig() tea.Msg {
 	return messages.LoadConfigResult{Error: json.Unmarshal(bf, &G)}
 }
 
-func SaveToFile() tea.Msg {
-	bytesData, err := json.Marshal(G)
-	if err != nil {
-		return err
-	}
+func SaveToFile(title string) tea.Cmd {
+	return func() tea.Msg {
+		bytesData, err := json.Marshal(G)
+		if err != nil {
+			return err
+		}
 
-	if err = os.WriteFile(SavePath(), bytesData, 0644); err != nil {
-		return err
-	}
+		if err = os.WriteFile(SavePath(), bytesData, 0644); err != nil {
+			return err
+		}
 
-	return messages.ShowAutoClearTipsRequest{Text: "配置保存成功"}
+		if title == "" {
+			return nil
+		}
+
+		return messages.ShowAutoTipsRequest{Text: title}
+	}
 }
 
 func SavePath() string {

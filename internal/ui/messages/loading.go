@@ -8,6 +8,8 @@ var (
 	lastLoadingId        int64
 	LoadingGetToken      = newLoadingKey("获取 token 信息中")
 	LoadingRequestTopics = newLoadingKey("获取主题中")
+	LoadingRequestDetail = newLoadingKey("获取内容中")
+	LoadingRequestReply  = newLoadingKey("获取评论中")
 )
 
 func newLoadingKey(text string) loadingCombine {

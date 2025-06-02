@@ -5,7 +5,7 @@ type V2TopicResponse struct {
 	Result []V2TopicResult `json:"result"`
 }
 type V2TopicResult struct {
-	Id              int    `json:"id"`
+	Id              int64  `json:"id"`
 	Title           string `json:"title"`
 	Content         string `json:"content"`
 	ContentRendered string `json:"content_rendered"`
@@ -19,7 +19,7 @@ type V2TopicResult struct {
 }
 
 type TopicComResult struct {
-	Id          int    `json:"id"`
+	Id          int64  `json:"id"`
 	Node        string `json:"node"`
 	Title       string `json:"title"`
 	Member      string `json:"member"`

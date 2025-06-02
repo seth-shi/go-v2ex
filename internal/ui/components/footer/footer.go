@@ -2,7 +2,6 @@ package footer
 
 import (
 	"fmt"
-	"log"
 	"slices"
 	"strings"
 	"time"
@@ -60,10 +59,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.leftText = msgType.Text
 		return m, nil
 	// 消息处理
-	case messages.ShowAutoClearTipsRequest:
-		log.Println("add clear tips")
+	case messages.ShowAutoTipsRequest:
 		return m, m.addAutoClearTips(msgType.Text)
-	case messages.ShiftAutoClearTipsRequest:
+	case messages.ShiftAutoTipsRequest:
 		// 删除第一个元素
 		m.tips = lo.Slice(m.tips, 1, len(m.tips))
 		return m, nil
@@ -114,7 +112,7 @@ func (m Model) View() string {
 			)
 		})
 		leftSection = append(leftSection, lipgloss.NewStyle().Render(strings.Join(loadingText, "")))
-	} else {
+	} else if config.G.ShowFooter {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
 		leftSection = append(leftSection, fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
 	}
@@ -147,7 +145,7 @@ func (m *Model) addAutoClearTips(text string) tea.Cmd {
 	m.tips = append(m.tips, text)
 	// 3s 后删除一个
 	return tea.Tick(time.Second*3, func(time.Time) tea.Msg {
-		return messages.ShiftAutoClearTipsRequest{}
+		return messages.ShiftAutoTipsRequest{}
 	})
 }
 

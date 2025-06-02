@@ -32,15 +32,16 @@ var (
 )
 
 type Model struct {
-	activeIndex int
-	activeTab   int
-	page        int
-	requesting  bool
-	topics      []types.TopicComResult
+	requesting bool
+	topics     []types.TopicComResult
 }
 
 func New() Model {
 	return Model{}
+}
+
+func (m *Model) SetTopics(topics []types.TopicComResult) {
+	m.topics = topics
 }
 
 func (m Model) Init() tea.Cmd {
@@ -52,16 +53,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgType := msg.(type) {
 	// 其它地方负责回调这里去请求数据,
 	case messages.GetTopicsRequest:
-		m.page = msgType.Page
+		config.Session.TopicPage = msgType.Page
 		m.requesting = true
 		// 默认进来是要给节点
-		m.activeTab = msgType.NodeIndex
-		return m, tea.Sequence(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(msgType.NodeIndex, msgType.Page), messages.Post(messages.LoadingRequestTopics.End))
+		return m, tea.Sequence(
+			messages.Post(messages.LoadingRequestTopics.Start),
+			api.Client.GetTopics(config.G.ActiveTab, msgType.Page),
+			messages.Post(messages.LoadingRequestTopics.End),
+		)
 	case messages.GetTopicsResult:
-		m.topics = msgType.Topics
-		m.requesting = false
-		// 显示错误和页码
-		return m, tea.Batch(messages.Post(msgType.Error), messages.Post(messages.ShowTipsRequest{Text: fmt.Sprintf("第 %d 页", msgType.Page)}))
+		return m, m.onTopicResult(msgType)
 	case tea.KeyMsg:
 		// 如果在请求中, 不处理键盘事件
 		if m.requesting {
@@ -69,38 +70,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if key.Matches(msgType, consts.AppKeyMap.Tab) {
-			m.activeTab++
-			m.page = 1
-			if m.activeTab >= len(config.G.GetNodes()) {
-				m.activeTab = 0
-			}
-			return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
+			return m, m.moveTabs()
 		}
 
 		switch msgType.Type {
+		case tea.KeyEnter:
+			// 查看详情
+			curr := lo.NthOrEmpty(m.topics, config.Session.TopicActiveIndex)
+			if curr.Id == 0 {
+				return m, messages.Post(errors.New("查看无效的主题"))
+			}
+
+			return m, messages.Post(messages.RedirectDetailRequest{Id: curr.Id})
 		case tea.KeyUp:
-			m.activeIndex--
-			if m.activeIndex < 0 {
-				m.activeIndex = max(0, len(m.topics)-1)
+			config.Session.TopicActiveIndex--
+			if config.Session.TopicActiveIndex < 0 {
+				config.Session.TopicActiveIndex = max(0, len(m.topics)-1)
 			}
 			return m, nil
 		case tea.KeyDown:
-			m.activeIndex++
-			if m.activeIndex >= len(m.topics) {
-				m.activeIndex = 0
+			config.Session.TopicActiveIndex++
+			if config.Session.TopicActiveIndex >= len(m.topics) {
+				config.Session.TopicActiveIndex = 0
 			}
 			return m, nil
 		case tea.KeyLeft:
-			if m.page > 0 {
-				m.page--
+			if config.Session.TopicPage > 0 {
+				config.Session.TopicPage--
 				m.requesting = true
-				return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
+				return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage})
 			}
 			return m, nil
 		case tea.KeyRight:
-			m.page++
+			config.Session.TopicPage++
 			m.requesting = true
-			return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
+			return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage})
 		default:
 			return m, nil
 		}
@@ -119,7 +123,29 @@ func (m Model) View() string {
 	return doc.String()
 }
 
-func (m Model) renderTabs() string {
+func (m *Model) moveTabs() tea.Cmd {
+	config.Session.TopicPage = 1
+	config.G.ActiveTab++
+	if config.G.ActiveTab >= len(config.G.GetNodes()) {
+		config.G.ActiveTab = 0
+	}
+	return tea.Batch(
+		config.SaveToFile(""),
+		messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
+	)
+}
+
+func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
+	m.requesting = false
+	if msgType.Error != nil {
+		return messages.Post(msgType.Error)
+	}
+	m.topics = msgType.Topics
+	// 显示错误和页码
+	return messages.Post(messages.ShowTipsRequest{Text: fmt.Sprintf("第 %d 页", msgType.Page)})
+}
+
+func (m *Model) renderTabs() string {
 	var (
 		doc          strings.Builder
 		renderedTabs []string
@@ -128,7 +154,7 @@ func (m Model) renderTabs() string {
 
 	for i, t := range tabs {
 		var style lipgloss.Style
-		isFirst, isLast, isActive := i == 0, i == len(tabs)-1, i == m.activeTab
+		isFirst, isLast, isActive := i == 0, i == len(tabs)-1, i == config.G.ActiveTab
 		if isActive {
 			style = activeTabStyle
 		} else {
@@ -154,7 +180,7 @@ func (m Model) renderTabs() string {
 	return doc.String()
 }
 
-func (m Model) renderTables() string {
+func (m *Model) renderTables() string {
 	if len(m.topics) == 0 {
 		return ""
 	}
@@ -211,7 +237,7 @@ func (m Model) renderTables() string {
 					style = lipgloss.NewStyle().Width(columnWidth[col])
 				}
 
-				if row == m.activeIndex {
+				if row == config.Session.TopicActiveIndex {
 					style = style.Foreground(lipgloss.Color("#1e9fff")).Bold(true)
 					rows[row][0] = "*"
 				}

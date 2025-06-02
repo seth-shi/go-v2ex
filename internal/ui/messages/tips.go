@@ -4,10 +4,10 @@ type ShowTipsRequest struct {
 	Text string
 }
 
-type ShowAutoClearTipsRequest struct {
+type ShowAutoTipsRequest struct {
 	Text string
 }
 
-type ShiftAutoClearTipsRequest struct {
+type ShiftAutoTipsRequest struct {
 	Text string
 }

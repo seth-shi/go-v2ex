@@ -50,28 +50,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.LoadConfigResult:
 		return m, m.onConfigLoaded(msgType.Error)
 	case messages.RedirectPageRequest:
+		// 切换页面
 		m.contentModel = msgType.Page
-		// 先切换到列表页面, 再发送消息去请求数据
-		var cmd tea.Cmd
-		if reflect.DeepEqual(m.contentModel, routes.TopicsModel) {
-			cmd = messages.Post(messages.GetTopicsRequest{Page: 1})
-		} else if reflect.DeepEqual(m.contentModel, routes.DetailModel) {
-			cmd = messages.Post(messages.GetDetailRequest{ID: 1})
-		}
-		return m, tea.Sequence(messages.Post(messages.ShowTipsRequest{Text: ""}), cmd)
+		return m, tea.Sequence(messages.Post(messages.ShowTipsRequest{Text: ""}))
+	case messages.GetTopicsResult:
+		// 缓存这个列表, 进到详情页回来还有数据, 并且消息传递给子级
+		routes.TopicsModel.SetTopics(msgType.Topics)
+	case messages.RedirectDetailRequest:
+		return m, tea.Sequence(messages.Post(messages.RedirectPageRequest{Page: routes.DetailModel}), messages.Post(messages.GetDetailRequest{ID: msgType.Id}))
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
 			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
 		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
 			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
-		//case key.Matches(msgType, consts.AppKeyMap.Back):
-		//	return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
 			config.G.SwitchShowMode()
-			return m, config.SaveToFile
+			return m, config.SaveToFile("")
 		case key.Matches(msgType, consts.AppKeyMap.Quit):
 			return m, tea.Quit
+		case key.Matches(msgType, consts.AppKeyMap.Back):
+			if !reflect.DeepEqual(m.contentModel, routes.TopicsModel) {
+				return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
+			}
 		}
 	}
 
@@ -114,8 +115,6 @@ func (m Model) onConfigLoaded(err error) tea.Cmd {
 	api.Client.RefreshConfig()
 	routes.SettingModel.RefreshConfig()
 
-	return messages.Post(messages.RedirectPageRequest{Page: routes.DetailModel})
-
 	// 第一次没 token 去配置页面
 	if config.G.Token == "" {
 		return messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
@@ -123,7 +122,8 @@ func (m Model) onConfigLoaded(err error) tea.Cmd {
 
 	// 去触发对应的地方获取数据
 	return tea.Sequence(
-		messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}),
+		// 先跳转到主题页, 然后获取第一页的数据
+		tea.Sequence(messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}), messages.Post(messages.GetTopicsRequest{Page: 1})),
 		// 获取个人信息
 		tea.Sequence(messages.Post(messages.LoadingGetToken.Start), api.Client.GetToken, messages.Post(messages.LoadingGetToken.End)),
 	)

@@ -78,6 +78,6 @@ var AppKeyMap = KeyMap{
 	),
 	SwitchShowMode: key.NewBinding(
 		key.WithKeys("-"),
-		key.WithHelp("-", "(减号)切换顶部底部显示隐藏"),
+		key.WithHelp("-", "(减号)切换底部显示隐藏"),
 	),
 }

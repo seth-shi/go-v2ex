@@ -1,8 +1,11 @@
 package messages
 
+import "github.com/seth-shi/go-v2ex/internal/types"
+
 type GetDetailRequest struct {
-	ID int
+	ID int64
 }
 
-type GetDetailResponse struct {
+type GetDetailResult struct {
+	Detail types.V2DetailResult
 }

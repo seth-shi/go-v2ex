@@ -2,8 +2,9 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
+
+	"github.com/go-resty/resty/v2"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
@@ -21,6 +22,10 @@ const (
 	v2TopicsUri = "/api/v2/nodes/%s/topics?p=%d"
 )
 
+var (
+	cacheTopics = make(map[string][]types.TopicComResult)
+)
+
 func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 
 	return func() tea.Msg {
@@ -36,6 +41,7 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 			res      []types.TopicComResult
 			v1Res    []types.V1TopicResult
 			v2Res    types.V2TopicResponse
+			rr       *resty.Response
 			err      error
 		)
 
@@ -43,9 +49,13 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 		switch nodeName {
 		case latestNode, hotNode:
 			uri = lo.If(nodeName == latestNode, latestUri).Else(hotUri)
-			_, err = r.SetResult(&v1Res).SetError(&v1Error).Get(uri)
+			rr, err = r.SetResult(&v1Res).SetError(&v1Error).Get(uri)
+			if err != nil {
+				return messages.GetTopicsResult{Error: err}
+			}
+
 			if !v1Error.Success() {
-				err = errors.New(v1Error.Message)
+				return messages.GetTopicsResult{Error: fmt.Errorf("[%s]%s", rr.Status(), v1Error.Message)}
 			}
 
 			// 这两个接口不支持分页, 手动切分
@@ -65,9 +75,13 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 		default:
 			// 使用 V2 的接口
 			uri = fmt.Sprintf(v2TopicsUri, nodeName, page)
-			_, err = r.SetResult(&v2Res).SetError(&v2Res).Get(uri)
+			rr, err = r.SetResult(&v2Res).SetError(&v2Res).Get(uri)
+			if err != nil {
+				return messages.GetTopicsResult{Error: fmt.Errorf("[%s]%s", rr.Status(), err)}
+			}
+
 			if !v2Res.Success {
-				err = errors.New(v2Res.Message)
+				return messages.GetTopicsResult{Error: fmt.Errorf("[%s]%s", rr.Status(), v2Res.Message)}
 			}
 			res = lo.Map(v2Res.Result, func(item types.V2TopicResult, index int) types.TopicComResult {
 				return types.TopicComResult{
@@ -84,7 +98,6 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 		return messages.GetTopicsResult{
 			Topics: res,
 			Page:   page,
-			Error:  err,
 		}
 	}
 }

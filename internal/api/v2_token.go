@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,7 +12,7 @@ import (
 
 func (client *v2exClient) GetToken() tea.Msg {
 	var res types.V2TokenResponse
-	_, err := client.client.R().
+	rr, err := client.client.R().
 		SetContext(context.Background()).
 		SetResult(&res).
 		SetError(&res).
@@ -24,8 +23,8 @@ func (client *v2exClient) GetToken() tea.Msg {
 	}
 
 	if !res.Success {
-		return errors.New(res.Message)
+		return fmt.Errorf("[%s]%s", rr.Status(), res.Message)
 	}
 
-	return messages.ShowAutoClearTipsRequest{Text: fmt.Sprintf("token 有效期: %s", carbon.CreateFromTimestamp(res.Result.Created+res.Result.Expiration).String())}
+	return messages.ShowAutoTipsRequest{Text: fmt.Sprintf("token 有效期: %s", carbon.CreateFromTimestamp(res.Result.Created+res.Result.Expiration).String())}
 }

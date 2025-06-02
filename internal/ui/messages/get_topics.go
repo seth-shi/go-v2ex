@@ -5,12 +5,12 @@ import (
 )
 
 type GetTopicsRequest struct {
-	Page      int
-	NodeIndex int
+	Page int
 }
 
 type GetTopicsResult struct {
 	Topics []types.TopicComResult
 	Page   int
-	Error  error
+	// 监听者需要处理请求回调 (请求拦截)
+	Error error
 }
