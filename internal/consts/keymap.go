@@ -13,7 +13,7 @@ type KeyMap struct {
 	SettingPage    key.Binding
 	Quit           key.Binding
 	Tab            key.Binding
-	Back           key.Binding
+	ShiftTab       key.Binding
 	Enter          key.Binding
 	SwitchShowMode key.Binding
 }
@@ -30,7 +30,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},     // first column
 		{k.HelpPage, k.SettingPage, k.Quit}, // second column
-		{k.Tab, k.Enter},
+		{k.Tab, k.ShiftTab, k.Enter},
 		{k.SwitchShowMode},
 	}
 }
@@ -54,19 +54,19 @@ var AppKeyMap = KeyMap{
 	),
 	HelpPage: key.NewBinding(
 		key.WithKeys("?"),
-		key.WithHelp(" ?", "查看帮助页面"),
-	),
-	Back: key.NewBinding(
-		key.WithKeys("ctrl+b", "backspace"),
-		key.WithHelp("ctrl+b / 删除键", "返回上一页"),
+		key.WithHelp(" ?", "查看帮助页面(再按一次返回)"),
 	),
 	SettingPage: key.NewBinding(
 		key.WithKeys("`"),
-		key.WithHelp("`", "反引号进入配置页面"),
+		key.WithHelp("`", "反引号进入配置页面(再按一次返回)"),
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "切换主题"),
+		key.WithHelp("tab", "切换下一个节点"),
+	),
+	ShiftTab: key.NewBinding(
+		key.WithKeys("shift+tab"),
+		key.WithHelp("shift+tab", "切换上一个切点"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c"),

@@ -2,6 +2,7 @@ package setting
 
 import (
 	"fmt"
+	"github.com/seth-shi/go-v2ex/internal/api"
 	"strings"
 
 	"github.com/seth-shi/go-v2ex/internal/config"
@@ -21,7 +22,7 @@ var (
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("保存"))
 
 	tipStyle = lipgloss.NewStyle().
-			Padding(1, 1, 0, 1)
+		Padding(1, 1, 0, 1)
 )
 
 type Model struct {
@@ -144,6 +145,7 @@ func (m Model) saveSettings() tea.Cmd {
 		config.G.Nodes = strings.TrimSpace(m.inputs[1].Value())
 	}
 
+	api.Client.RefreshConfig()
 	return config.SaveToFile("配置保存成功")
 }
 

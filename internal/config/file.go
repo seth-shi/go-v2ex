@@ -19,7 +19,7 @@ var (
 
 type fileConfig struct {
 	Token      string `json:"personal_access_token"`
-	Nodes      string `json:"nodes" default:"latest,hot,tech,apple,jobs,deals,beijing,qna"`
+	Nodes      string `json:"nodes" default:"latest,hot,qna,all4all,programmer,jobs,share,apple,create,macos,career,pointless"`
 	Timeout    uint   `json:"timeout" default:"5"`
 	ShowFooter bool   `json:"show_footer" default:"true"`
 	ActiveTab  int    `json:"active_tab"`

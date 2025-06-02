@@ -9,3 +9,6 @@ type RedirectPageRequest struct {
 type RedirectDetailRequest struct {
 	Id int64
 }
+
+type RedirectTopicsPage struct {
+}

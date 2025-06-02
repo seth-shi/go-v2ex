@@ -6,6 +6,9 @@ import (
 	"math"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/seth-shi/go-v2ex/internal/consts"
+
 	"github.com/dromara/carbon/v2"
 	"github.com/muesli/reflow/wrap"
 	"github.com/seth-shi/go-v2ex/internal/api"
@@ -67,7 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.replyPage = 1
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())+2)
 		// 开启定时器去获取评论列表
-		return m, tea.Batch(messages.Post(messages.ShowTipsRequest{Text: "按 n 键查看更多评论"}), m.getDetail(msgType.ID), m.getReply(msgType.ID))
+		return m, tea.Batch(messages.Post(messages.ShowTipsRequest{Text: "按 n 更多评论 ←返回列表"}), m.getDetail(msgType.ID), m.getReply(msgType.ID))
 	case messages.GetDetailResult:
 		m.detail = msgType.Detail
 		m.initViewport()
@@ -81,6 +84,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 回到首页
 		case msgType.String() == "n":
 			return m, m.getReply(m.id)
+		case key.Matches(msgType, consts.AppKeyMap.Left):
+			return m, messages.Post(messages.RedirectTopicsPage{})
 		}
 	}
 
@@ -175,9 +180,10 @@ func (m *Model) initViewport() {
 
 	// 开始渲染评论
 	content.WriteString("\n\n")
-	content.WriteString(descStyle.Render("回复列表\n"))
+	content.WriteString(descStyle.Bold(true).Render("回复列表"))
+	content.WriteString("\n\n")
 	for i, r := range m.replies {
-		content.WriteString(descStyle.Render(fmt.Sprintf("#%d %s  %s", i+1, r.Member.Username, carbon.CreateFromTimestamp(r.Created))))
+		content.WriteString(descStyle.Render(fmt.Sprintf("#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username)))
 		content.WriteString("\n")
 		content.WriteString(r.GetContent())
 		content.WriteString("\n\n")

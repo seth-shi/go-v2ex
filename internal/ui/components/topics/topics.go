@@ -69,8 +69,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, messages.Post(errors.New("请求中"))
 		}
 
-		if key.Matches(msgType, consts.AppKeyMap.Tab) {
-			return m, m.moveTabs()
+		switch {
+		case key.Matches(msgType, consts.AppKeyMap.Tab):
+			return m, m.moveTabs(1)
+		case key.Matches(msgType, consts.AppKeyMap.ShiftTab):
+			return m, m.moveTabs(-1)
 		}
 
 		switch msgType.Type {
@@ -123,12 +126,22 @@ func (m Model) View() string {
 	return doc.String()
 }
 
-func (m *Model) moveTabs() tea.Cmd {
+func (m *Model) moveTabs(add int) tea.Cmd {
 	config.Session.TopicPage = 1
-	config.G.ActiveTab++
-	if config.G.ActiveTab >= len(config.G.GetNodes()) {
+	config.G.ActiveTab += add
+
+	nodesSize := len(config.G.GetNodes())
+	if nodesSize == 0 {
+		return nil
+	}
+
+	if config.G.ActiveTab >= nodesSize {
 		config.G.ActiveTab = 0
 	}
+	if config.G.ActiveTab < 0 {
+		config.G.ActiveTab = nodesSize - 1
+	}
+
 	return tea.Batch(
 		config.SaveToFile(""),
 		messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
@@ -171,7 +184,7 @@ func (m *Model) renderTabs() string {
 			border.BottomRight = "┤"
 		}
 		style = style.Border(border)
-		renderedTabs = append(renderedTabs, style.Render(t))
+		renderedTabs = append(renderedTabs, style.Render(lo.ValueOr(config.NodeMap, t, t)))
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
@@ -199,9 +212,10 @@ func (m *Model) renderTables() string {
 	for i, topic := range m.topics {
 
 		// 设置列自适应宽度
-		if len(topic.Node) > columnWidth[1] {
+		nodeTitle := lo.ValueOr(config.NodeMap, topic.Node, topic.Node)
+		if len(nodeTitle) > columnWidth[1] {
 			// lipgloss.Width 处理中文, len 处理空格
-			columnWidth[1] = max(lipgloss.Width(topic.Node), len(topic.Node))
+			columnWidth[1] = max(lipgloss.Width(nodeTitle), len(nodeTitle))
 		}
 		if len(topic.Member) > columnWidth[3] {
 			columnWidth[3] = max(lipgloss.Width(topic.Member), len(topic.Member))
@@ -210,7 +224,7 @@ func (m *Model) renderTables() string {
 		rows = append(
 			rows, []string{
 				strconv.Itoa(i + 1),
-				topic.Node,
+				nodeTitle,
 				topic.Title,
 				topic.Member,
 				carbon.CreateFromTimestamp(topic.LastTouched).String(),

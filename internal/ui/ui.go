@@ -58,21 +58,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		routes.TopicsModel.SetTopics(msgType.Topics)
 	case messages.RedirectDetailRequest:
 		return m, tea.Sequence(messages.Post(messages.RedirectPageRequest{Page: routes.DetailModel}), messages.Post(messages.GetDetailRequest{ID: msgType.Id}))
+	case messages.RedirectTopicsPage:
+		return m, tea.Sequence(messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}))
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
-			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
+			var cmds []tea.Cmd
+			if reflect.DeepEqual(m.contentModel, routes.SettingModel) {
+				cmds = append(cmds, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}))
+				cmds = append(cmds, messages.Post(messages.GetTopicsRequest{Page: 1}))
+			} else {
+				cmds = append(cmds, messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel}))
+			}
+			return m, tea.Sequence(cmds...)
 		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
 			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
-			config.G.SwitchShowMode()
-			return m, config.SaveToFile("")
+			if !reflect.DeepEqual(m.contentModel, routes.SettingModel) {
+				config.G.SwitchShowMode()
+				return m, config.SaveToFile("")
+			}
 		case key.Matches(msgType, consts.AppKeyMap.Quit):
 			return m, tea.Quit
-		case key.Matches(msgType, consts.AppKeyMap.Back):
-			if !reflect.DeepEqual(m.contentModel, routes.TopicsModel) {
-				return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
-			}
 		}
 	}
 
