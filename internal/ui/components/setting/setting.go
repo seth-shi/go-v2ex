@@ -171,7 +171,7 @@ func (m Model) View() string {
 	if len(m.inputs) > 1 {
 		text := fmt.Sprintf(
 			"\n%s\n%s",
-			"所有分类此处查看: https://www.v2ex.com/api/nodes/all.json (多个分类使用英文逗号隔开, 第一页使用 V1 接口, 第二页以及后面的使用 V2 接口)",
+			"所有分类此处查看: https://v2ex.com/planes (多个分类使用英文逗号隔开, URL 上的 https://v2ex.com/go/{name})",
 			m.inputs[1].View(),
 		)
 		b.WriteString(tipStyle.Render(text))

@@ -205,8 +205,8 @@ func (m *Model) renderTables() string {
 			0,
 			0,
 			0,
-			20, // 时间
 			7,  // 回复数
+			20, // 时间
 		}
 	)
 	for i, topic := range m.topics {
@@ -227,8 +227,8 @@ func (m *Model) renderTables() string {
 				nodeTitle,
 				topic.Title,
 				topic.Member,
-				carbon.CreateFromTimestamp(topic.LastTouched).String(),
 				strconv.Itoa(topic.Replies),
+				carbon.CreateFromTimestamp(topic.LastTouched).String(),
 			},
 		)
 	}
@@ -247,7 +247,7 @@ func (m *Model) renderTables() string {
 				style := cellStyle
 				if col == 2 {
 					style = lipgloss.NewStyle().Width(titleWidth)
-				} else if col < len(columnWidth)-1 {
+				} else if col < len(columnWidth) {
 					style = lipgloss.NewStyle().Width(columnWidth[col])
 				}
 
@@ -259,7 +259,7 @@ func (m *Model) renderTables() string {
 				return style
 			},
 		).
-		Headers("#", "node", "title", "member", "last_touched", "replies").
+		Headers("#", "节点", "标题", "member", "评论数", "最后回复时间").
 		Rows(rows...)
 	return t.String()
 }

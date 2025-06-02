@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
@@ -22,10 +23,6 @@ const (
 	v2TopicsUri = "/api/v2/nodes/%s/topics?p=%d"
 )
 
-var (
-	cacheTopics = make(map[string][]types.TopicComResult)
-)
-
 func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 
 	return func() tea.Msg {
@@ -44,6 +41,10 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 			rr       *resty.Response
 			err      error
 		)
+
+		if nodeName == hotNode && page > 1 {
+			return messages.GetTopicsResult{Error: errors.New("只有一页")}
+		}
 
 		r := client.client.R().SetContext(context.Background())
 		switch nodeName {
