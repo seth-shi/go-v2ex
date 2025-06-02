@@ -1,20 +1,46 @@
 ## go-v2ex
-
-* 一个命令行版本的**v2ex**
-
+一个基于** Go** 语言 开发的命令行版 **V2EX** 客户端，支持在终端内快速浏览主题、查看评论、切换节点及基础配置管理，为极客用户提供高效的 **V2EX** 访问体验（摸鱼必备）。
 
 ## 预览图
-
 ![列表页](assets/1.gif)
 ![列表页](assets/2.png)
 
-## 安装使用 (TODO)
+## 功能特性
+- **多节点切换**：支持自定义节点列表
+- **主题浏览**：查看最新/热门主题，支持分页翻页
+- **详情查看**：查看主题完整内容及评论列表（支持加载更多评论）
+- **快捷操作**：通过快捷键快速切换页面、退出程序等
+- **配置管理**：支持设置 API 令牌（用于部分高级功能）和自定义节点列表
 
-* `go install github.com/seth-shi/go-v2ex@latest`
-* 去发布页面下载二进制文件
+
+## 安装使用
+
+### 安装
+#### 手动安装
+  * 下载二进制文件 [https://github.com/seth-shi/go-v2ex/releases](https://github.com/seth-shi/go-v2ex/releases)
+  * 放入环境变量中
+#### Golang 直装​
+  * `go install github.com/seth-shi/go-v2ex@latest`
+
+### 使用
+* 运行 `go-v2ex` 命令即可启动程序。
+* 首次运行会生成配置文件 `~/.go-v2ex.json`
+
+| 功能               | 快捷键          | 说明                          |
+|--------------------|-----------------|-------------------------------|
+| 列表移动到上一个   | ↑ / w           | 向上移动选择列表中的上一个条目 |
+| 列表移动到下一个   | ↓ / s           | 向下移动选择列表中的下一个条目 |
+| 上一页             | ← / a           | 切换到上一页内容（如主题分页） |
+| 下一页             | → / d           | 切换到下一页内容（如主题分页） |
+| 查看帮助页面       | ?               | 进入帮助页面（再按一次返回）  |
+| 进入配置页面       | `（反引号）      | 进入配置页面（再按一次返回）  |
+| 切换下一个节点     | tab             | 切换到下一个节点              |
+| 切换上一个节点     | shift+tab       | 切换到上一个节点              |
+| 退出程序           | esc / ctrl+c    | 直接退出客户端                |
+| 查看主题详情       | enter           | 查看当前选中的主题详情        |
+| 切换底部显示隐藏   | -（减号）       | 切换底部信息的显示/隐藏状态   |
 
 
-
-## 问题
-* 文本不对齐
-  * `export LC_CTYPE="en_US.UTF-8"`
+## 感谢
+* [https://github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
+* [https://github.com/charmbracelet/bubbles](https://github.com/charmbracelet/bubbles)
