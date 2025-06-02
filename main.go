@@ -20,5 +20,5 @@ func main() {
 		defer f.Close()
 	}
 
-	lo.Must1(tea.NewProgram(ui.NewModel()).Run())
+	lo.Must1(tea.NewProgram(ui.NewModel(), tea.WithMouseCellMotion()).Run())
 }

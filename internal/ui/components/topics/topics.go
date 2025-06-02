@@ -56,11 +56,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.requesting = true
 		// 默认进来是要给节点
 		m.activeTab = msgType.NodeIndex
-		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(msgType.NodeIndex, msgType.Page))
+		return m, tea.Sequence(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(msgType.NodeIndex, msgType.Page), messages.Post(messages.LoadingRequestTopics.End))
 	case messages.GetTopicsResult:
 		m.topics = msgType.Topics
 		m.requesting = false
-		return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.End), messages.Post(msgType.Error), messages.Post(messages.Tips{Text: fmt.Sprintf("第 %d 页", msgType.Page)}))
+		// 显示错误和页码
+		return m, tea.Batch(messages.Post(msgType.Error), messages.Post(messages.ShowTipsRequest{Text: fmt.Sprintf("第 %d 页", msgType.Page)}))
 	case tea.KeyMsg:
 		// 如果在请求中, 不处理键盘事件
 		if m.requesting {
@@ -73,7 +74,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.activeTab >= len(config.G.GetNodes()) {
 				m.activeTab = 0
 			}
-			return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(m.activeTab, m.page))
+			return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
 		}
 
 		switch msgType.Type {
@@ -93,13 +94,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.page > 0 {
 				m.page--
 				m.requesting = true
-				return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(m.activeTab, m.page))
+				return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
 			}
 			return m, nil
 		case tea.KeyRight:
 			m.page++
 			m.requesting = true
-			return m, tea.Batch(messages.Post(messages.LoadingRequestTopics.Start), api.Client.GetTopics(m.activeTab, m.page))
+			return m, messages.Post(messages.GetTopicsRequest{Page: m.page, NodeIndex: m.activeTab})
 		default:
 			return m, nil
 		}

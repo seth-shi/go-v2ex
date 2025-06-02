@@ -2,6 +2,7 @@ package footer
 
 import (
 	"fmt"
+	"log"
 	"slices"
 	"strings"
 	"time"
@@ -21,11 +22,12 @@ const (
 )
 
 type Model struct {
-	focusIndex int
-	// 数据
 	// 只在 update view 读写, 无需上锁
+	// 会自动删除
 	loadings map[int]string
 	errors   []string
+	tips     []string
+	// 固定文案, 不会修改 (例如用来显示页码)
 	leftText string
 	spinner  spinner.Model
 }
@@ -54,16 +56,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.EndLoading:
 		delete(m.loadings, msgType.ID)
 		return m, nil
-	case messages.Tips:
+	case messages.ShowTipsRequest:
 		m.leftText = msgType.Text
 		return m, nil
-	case messages.GetTopicsResult:
-		// 这里删除一下, 防止切换页面 loading 监听不到
-		delete(m.loadings, messages.LoadingRequestTopics.End.ID)
+	// 消息处理
+	case messages.ShowAutoClearTipsRequest:
+		log.Println("add clear tips")
+		return m, m.addAutoClearTips(msgType.Text)
+	case messages.ShiftAutoClearTipsRequest:
+		// 删除第一个元素
+		m.tips = lo.Slice(m.tips, 1, len(m.tips))
 		return m, nil
 	case error:
 		return m, m.addError(msgType)
-	case messages.ClearErrorRequest:
+	case messages.ShiftErrorRequest:
 		// 删除第一个元素
 		m.errors = lo.Slice(m.errors, 1, len(m.errors))
 		return m, nil
@@ -83,7 +89,7 @@ func (m Model) View() string {
 		rightSection = lipgloss.NewStyle().SetString(rightText)
 	)
 
-	if len(m.errors) > 0 || len(m.loadings) > 0 || m.leftText != "" {
+	if len(m.errors) > 0 || len(m.loadings) > 0 || len(m.tips) > 0 || m.leftText != "" {
 
 		if m.leftText != "" {
 			leftSection = append(leftSection, m.leftText)
@@ -92,6 +98,9 @@ func (m Model) View() string {
 		leftSection = append(leftSection, lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#ff5722")).
 			Render(strings.Join(m.errors, " / ")))
+
+		leftSection = append(leftSection, lipgloss.NewStyle().
+			Render(strings.Join(m.tips, " / ")))
 
 		loadingKeys := lo.Keys(m.loadings)
 		slices.Sort(loadingKeys)
@@ -133,6 +142,15 @@ func (m Model) View() string {
 		Render(footer)
 }
 
+func (m *Model) addAutoClearTips(text string) tea.Cmd {
+
+	m.tips = append(m.tips, text)
+	// 3s 后删除一个
+	return tea.Tick(time.Second*3, func(time.Time) tea.Msg {
+		return messages.ShiftAutoClearTipsRequest{}
+	})
+}
+
 func (m *Model) addError(err error) tea.Cmd {
 
 	if err == nil {
@@ -142,6 +160,6 @@ func (m *Model) addError(err error) tea.Cmd {
 	m.errors = append(m.errors, err.Error())
 	// 3s 后删除一个
 	return tea.Tick(time.Second*3, func(time.Time) tea.Msg {
-		return messages.ClearErrorRequest{}
+		return messages.ShiftErrorRequest{}
 	})
 }

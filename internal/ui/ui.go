@@ -13,22 +13,19 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/footer"
-	"github.com/seth-shi/go-v2ex/internal/ui/components/header"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/routes"
 )
 
 type Model struct {
-	currBodyModel tea.Model
-	headerModel   tea.Model
-	footerModel   tea.Model
+	contentModel tea.Model
+	footerModel  tea.Model
 }
 
 func NewModel() Model {
 	return Model{
-		currBodyModel: routes.SplashModel,
-		headerModel:   header.New(),
-		footerModel:   footer.New(),
+		contentModel: routes.SplashModel,
+		footerModel:  footer.New(),
 	}
 }
 
@@ -38,8 +35,7 @@ func (m Model) Init() tea.Cmd {
 		// 加载配置
 		config.LoadFileConfig,
 		// 其它不要用 init 初始化, 使用消息去刷新
-		m.headerModel.Init(),
-		m.currBodyModel.Init(),
+		m.contentModel.Init(),
 		m.footerModel.Init(),
 	)
 }
@@ -47,27 +43,28 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msgType := msg.(type) {
-	// 全局监听, 让子组件更新
+	// 全局监听
 	case tea.WindowSizeMsg:
 		config.Screen.Width = msgType.Width
 		config.Screen.Height = msgType.Height
-	// 全局监听, 无需转给子组件
 	case messages.LoadConfigResult:
 		return m, m.onConfigLoaded(msgType.Error)
 	case messages.RedirectPageRequest:
-		m.currBodyModel = msgType.Page
+		m.contentModel = msgType.Page
 		// 先切换到列表页面, 再发送消息去请求数据
 		var cmd tea.Cmd
-		if reflect.DeepEqual(m.currBodyModel, routes.TopicsModel) {
+		if reflect.DeepEqual(m.contentModel, routes.TopicsModel) {
 			cmd = messages.Post(messages.GetTopicsRequest{Page: 1})
+		} else if reflect.DeepEqual(m.contentModel, routes.DetailModel) {
+			cmd = messages.Post(messages.GetDetailRequest{ID: 1})
 		}
-		return m, cmd
+		return m, tea.Sequence(messages.Post(messages.ShowTipsRequest{Text: ""}), cmd)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
-			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
+			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.SettingModel), routes.TopicsModel).Else(routes.SettingModel)})
 		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
-			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.currBodyModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
+			return m, messages.Post(messages.RedirectPageRequest{Page: lo.If[tea.Model](reflect.DeepEqual(m.contentModel, routes.HelpModel), routes.TopicsModel).Else(routes.HelpModel)})
 		//case key.Matches(msgType, consts.AppKeyMap.Back):
 		//	return m, messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel})
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
@@ -83,9 +80,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 		cmd  tea.Cmd
 	)
-	m.headerModel, cmd = m.headerModel.Update(msg)
-	cmds = append(cmds, cmd)
-	m.currBodyModel, cmd = m.currBodyModel.Update(msg)
+	m.contentModel, cmd = m.contentModel.Update(msg)
 	cmds = append(cmds, cmd)
 	m.footerModel, cmd = m.footerModel.Update(msg)
 	cmds = append(cmds, cmd)
@@ -98,9 +93,7 @@ func (m Model) View() string {
 		output strings.Builder
 	)
 
-	output.WriteString(m.headerModel.View())
-	output.WriteRune('\n')
-	output.WriteString(m.currBodyModel.View())
+	output.WriteString(m.contentModel.View())
 	output.WriteRune('\n')
 
 	// 底部增加一个 padding, 来固定在底部
@@ -121,14 +114,17 @@ func (m Model) onConfigLoaded(err error) tea.Cmd {
 	api.Client.RefreshConfig()
 	routes.SettingModel.RefreshConfig()
 
+	return messages.Post(messages.RedirectPageRequest{Page: routes.DetailModel})
+
 	// 第一次没 token 去配置页面
 	if config.G.Token == "" {
 		return messages.Post(messages.RedirectPageRequest{Page: routes.SettingModel})
 	}
 
 	// 去触发对应的地方获取数据
-	return tea.Batch(
+	return tea.Sequence(
 		messages.Post(messages.RedirectPageRequest{Page: routes.TopicsModel}),
-		messages.Post(messages.GetMeRequest{}),
+		// 获取个人信息
+		tea.Sequence(messages.Post(messages.LoadingGetToken.Start), api.Client.GetToken, messages.Post(messages.LoadingGetToken.End)),
 	)
 }

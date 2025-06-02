@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/seth-shi/go-v2ex/internal/ui/components/detail"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/help"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/setting"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/splash"
@@ -8,15 +9,9 @@ import (
 )
 
 var (
-	HelpModel    help.Model
-	SettingModel setting.Model
-	TopicsModel  topics.Model
-	SplashModel  splash.Model
-)
-
-func init() {
-	HelpModel = help.New()
+	HelpModel    = help.New()
 	SettingModel = setting.New()
-	TopicsModel = topics.New()
-	SplashModel = splash.New()
-}
+	TopicsModel  = topics.New()
+	SplashModel  = splash.New()
+	DetailModel  = detail.New()
+)

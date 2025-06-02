@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
-
 	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -115,7 +113,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs[i].TextStyle = noStyle
 			}
 
-			cmds = append(cmds, messages.Post(messages.Tips{Text: ""}))
 			return m, tea.Batch(cmds...)
 		}
 	}

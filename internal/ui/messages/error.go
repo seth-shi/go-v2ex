@@ -1,4 +1,4 @@
 package messages
 
-type ClearErrorRequest struct {
+type ShiftErrorRequest struct {
 }

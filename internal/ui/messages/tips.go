@@ -1,5 +1,13 @@
 package messages
 
-type Tips struct {
+type ShowTipsRequest struct {
+	Text string
+}
+
+type ShowAutoClearTipsRequest struct {
+	Text string
+}
+
+type ShiftAutoClearTipsRequest struct {
 	Text string
 }

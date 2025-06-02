@@ -80,7 +80,7 @@ func SaveToFile() tea.Msg {
 		return err
 	}
 
-	return messages.Tips{Text: "配置保存成功"}
+	return messages.ShowAutoClearTipsRequest{Text: "配置保存成功"}
 }
 
 func SavePath() string {
