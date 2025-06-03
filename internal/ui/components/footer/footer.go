@@ -2,11 +2,12 @@ package footer
 
 import (
 	"fmt"
-	"github.com/seth-shi/go-v2ex/internal/api"
 	"math"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/seth-shi/go-v2ex/internal/api"
 
 	"github.com/seth-shi/go-v2ex/internal/config"
 
@@ -18,8 +19,8 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
-const (
-	rightText = "go-v2ex@v1.0.0 Powered by seth-shi"
+var (
+	rightText = fmt.Sprintf("%s@%s Powered by seth-shi", consts.AppName, consts.AppVersion)
 )
 
 type Model struct {
@@ -95,24 +96,30 @@ func (m Model) View() string {
 			leftSection = append(leftSection, m.leftText)
 		}
 
-		leftSection = append(leftSection, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#ff5722")).
-			Render(strings.Join(m.errors, " / ")))
+		leftSection = append(
+			leftSection, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#ff5722")).
+				Render(strings.Join(m.errors, " / ")),
+		)
 
-		leftSection = append(leftSection, lipgloss.NewStyle().
-			Render(strings.Join(m.tips, " / ")))
+		leftSection = append(
+			leftSection, lipgloss.NewStyle().
+				Render(strings.Join(m.tips, " / ")),
+		)
 
 		loadingKeys := lo.Keys(m.loadings)
 		slices.Sort(loadingKeys)
-		loadingText := lo.Map(loadingKeys, func(key int, index int) string {
-			return fmt.Sprintf(
-				"%s %s",
-				lipgloss.NewStyle().PaddingLeft(1).Render(
-					m.spinner.View(),
-				),
-				m.loadings[key],
-			)
-		})
+		loadingText := lo.Map(
+			loadingKeys, func(key int, index int) string {
+				return fmt.Sprintf(
+					"%s %s",
+					lipgloss.NewStyle().PaddingLeft(1).Render(
+						m.spinner.View(),
+					),
+					m.loadings[key],
+				)
+			},
+		)
 		leftSection = append(leftSection, lipgloss.NewStyle().Render(strings.Join(loadingText, "")))
 	} else if config.G.ShowFooter {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
@@ -135,11 +142,13 @@ func (m Model) View() string {
 	}
 
 	var output strings.Builder
-	output.WriteString(lipgloss.NewStyle().
-		Width(config.Screen.Width).
-		PaddingLeft(padding).
-		PaddingRight(padding).
-		Render(footer))
+	output.WriteString(
+		lipgloss.NewStyle().
+			Width(config.Screen.Width).
+			PaddingLeft(padding).
+			PaddingRight(padding).
+			Render(footer),
+	)
 
 	// 底部宽度
 	borderWidth := config.Screen.Width
@@ -156,9 +165,11 @@ func (m *Model) addAutoClearTips(text string) tea.Cmd {
 
 	m.tips = append(m.tips, text)
 	// 3s 后删除一个
-	return tea.Tick(time.Second*3, func(time.Time) tea.Msg {
-		return messages.ShiftAutoTipsRequest{}
-	})
+	return tea.Tick(
+		time.Second*3, func(time.Time) tea.Msg {
+			return messages.ShiftAutoTipsRequest{}
+		},
+	)
 }
 
 func (m *Model) addError(err error) tea.Cmd {
@@ -169,7 +180,9 @@ func (m *Model) addError(err error) tea.Cmd {
 
 	m.errors = append(m.errors, err.Error())
 	// 3s 后删除一个
-	return tea.Tick(time.Second*3, func(time.Time) tea.Msg {
-		return messages.ShiftErrorRequest{}
-	})
+	return tea.Tick(
+		time.Second*3, func(time.Time) tea.Msg {
+			return messages.ShiftErrorRequest{}
+		},
+	)
 }

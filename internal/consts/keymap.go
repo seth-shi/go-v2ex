@@ -21,63 +21,65 @@ type KeyMap struct {
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.HelpPage, k.Quit}
+	return []key.Binding{
+		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, // first column
+		k.HelpPage, k.SettingPage, k.Quit, // second column
+		k.SwitchShowMode,
+	}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right},     // first column
-		{k.HelpPage, k.SettingPage, k.Quit}, // second column
-		{k.Tab, k.ShiftTab, k.Enter},
-		{k.SwitchShowMode},
+		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter}, // first column
+		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode},       // second column
 	}
 }
 
 var AppKeyMap = KeyMap{
 	Up: key.NewBinding(
-		key.WithKeys("up", "w"),
-		key.WithHelp("↑ / w", "列表移动到上一个"),
+		key.WithKeys("up"),
+		key.WithHelp("↑", "[主题页]移动到上一个"),
 	),
 	Down: key.NewBinding(
-		key.WithKeys("down", "s"),
-		key.WithHelp("↓ / s", "列表移动到下一个"),
+		key.WithKeys("down"),
+		key.WithHelp("↓", "[主题页]列表移动到下一个"),
 	),
 	Left: key.NewBinding(
-		key.WithKeys("left", "a"),
-		key.WithHelp("← / a", "上一页"),
+		key.WithKeys("left"),
+		key.WithHelp("←", "[主题页]上一页"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("right", "d"),
-		key.WithHelp("→ / d", "下一页"),
+		key.WithKeys("right"),
+		key.WithHelp("→", "[主题页]下一页"),
 	),
 	HelpPage: key.NewBinding(
 		key.WithKeys("?"),
-		key.WithHelp(" ?", "查看帮助页面(再按一次返回)"),
+		key.WithHelp("?", "查看帮助页面(再按一次返回首页)"),
 	),
 	SettingPage: key.NewBinding(
 		key.WithKeys("`"),
-		key.WithHelp("`", "反引号进入配置页面(再按一次返回)"),
+		key.WithHelp("`", "[反引号]进入配置页面(再按一次返回首页)"),
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "切换下一个节点"),
+		key.WithHelp("tab", "[主题页]切换下一个节点"),
 	),
 	ShiftTab: key.NewBinding(
 		key.WithKeys("shift+tab"),
-		key.WithHelp("shift+tab", "切换上一个切点"),
+		key.WithHelp("shift+tab", "[主题页]切换上一个切点"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c"),
-		key.WithHelp("esc / ctrl+c", "退出程序"),
+		key.WithHelp("esc", "退出程序"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "查看主题详情"),
+		key.WithHelp("enter", "[主题页]查看主题详情"),
 	),
 	SwitchShowMode: key.NewBinding(
 		key.WithKeys("-"),
-		key.WithHelp("-", "(减号)切换底部显示隐藏"),
+		key.WithHelp("-", "[减号]切换底部显示隐藏"),
 	),
 }

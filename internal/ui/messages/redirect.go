@@ -3,7 +3,7 @@ package messages
 import tea "github.com/charmbracelet/bubbletea"
 
 type RedirectPageRequest struct {
-	Page tea.Model
+	ContentModel tea.Model
 }
 
 type RedirectDetailRequest struct {
@@ -11,4 +11,5 @@ type RedirectDetailRequest struct {
 }
 
 type RedirectTopicsPage struct {
+	Page int
 }

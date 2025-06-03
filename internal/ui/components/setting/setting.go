@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/seth-shi/go-v2ex/internal/api"
-
 	"github.com/seth-shi/go-v2ex/internal/config"
+	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,8 +22,16 @@ var (
 	focusedButton = focusedStyle.Render("[ 保存 ]")
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("保存"))
 
+	homeFocusedButton = focusedStyle.Render("[ 回到首页 ]")
+	homeButton        = fmt.Sprintf("[ %s ]", blurredStyle.Render("回到首页"))
+
 	tipStyle = lipgloss.NewStyle().
 			Padding(1, 1, 0, 1)
+
+	titleStyle = lipgloss.NewStyle().
+			Bold(true).
+			Padding(1, 1, 0, 1)
+	formsCount = 4
 )
 
 type Model struct {
@@ -83,8 +91,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
-			if s == "enter" && m.focusIndex == len(m.inputs) {
-				return m, m.saveSettings()
+			if s == "enter" {
+
+				if m.focusIndex == len(m.inputs) {
+					return m, m.saveSettings()
+				}
+
+				if m.focusIndex == formsCount-1 {
+					return m, messages.Post(
+						messages.RedirectTopicsPage{
+							Page: 1,
+						},
+					)
+				}
 			}
 
 			// Cycle indexes
@@ -94,13 +113,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focusIndex++
 			}
 
-			if m.focusIndex > len(m.inputs) {
+			if m.focusIndex > formsCount {
 				m.focusIndex = 0
 			} else if m.focusIndex < 0 {
-				m.focusIndex = len(m.inputs)
+				m.focusIndex = formsCount - 1
 			}
 
-			cmds := make([]tea.Cmd, len(m.inputs)+1)
+			// 更新表单的值
+			cmds := make([]tea.Cmd, formsCount)
 			for i := 0; i <= len(m.inputs)-1; i++ {
 				if i == m.focusIndex {
 					// Set focused state
@@ -153,11 +173,9 @@ func (m Model) saveSettings() tea.Cmd {
 func (m Model) View() string {
 	var b strings.Builder
 
-	text := fmt.Sprintf(
-		"配置文件路径:%s",
-		config.SavePath(),
-	)
-	b.WriteString(tipStyle.Render(text))
+	b.WriteString(titleStyle.Render("tab 切换表单, 回车确认"))
+	text := fmt.Sprintf("配置文件路径: %s", config.SavePath())
+	b.WriteString(titleStyle.Render(text))
 
 	if len(m.inputs) > 0 {
 		text := fmt.Sprintf(
@@ -177,11 +195,23 @@ func (m Model) View() string {
 		b.WriteString(tipStyle.Render(text))
 	}
 
-	button := &blurredButton
+	btn1 := &blurredButton
+	// 最后一个 input
 	if m.focusIndex == len(m.inputs) {
-		button = &focusedButton
+		btn1 = &focusedButton
 	}
 
-	b.WriteString(tipStyle.Render(fmt.Sprintf("\n%s\n", *button)))
-	return b.String()
+	btn2 := &homeButton
+	// 最后一个 input
+	if m.focusIndex == formsCount-1 {
+		btn2 = &homeFocusedButton
+	}
+
+	b.WriteString(tipStyle.Render(fmt.Sprintf("\n%s    %s\n", *btn1, *btn2)))
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(config.Screen.Width - 2).
+		Height(config.Screen.Height - 4).
+		Padding(1).
+		Render(b.String())
 }
