@@ -40,6 +40,7 @@ type Model struct {
 	viewportReady   bool
 	detail          types.V2DetailResult
 	replies         []types.V2ReplyResult
+	pagination      types.Pagination
 	canRequestReply bool
 
 	id              int64
@@ -70,7 +71,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.replyPage = 1
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
 		// 开启定时器去获取评论列表
-		return m, tea.Batch(messages.Post(messages.ShowTipsRequest{Text: "按 n 更多评论 ←返回列表"}), m.getDetail(msgType.ID), m.getReply(msgType.ID))
+		return m, tea.Batch(
+			messages.Post(messages.ShowTipsRequest{Text: "按 n 更多评论 ←返回列表"}), m.getDetail(msgType.ID),
+			m.getReply(msgType.ID),
+		)
 	case messages.GetDetailResult:
 		m.detail = msgType.Detail
 		m.initViewport()
@@ -110,7 +114,8 @@ func (m Model) headerView() string {
 
 func (m Model) getDetail(id int64) tea.Cmd {
 	return tea.Sequence(
-		messages.Post(messages.LoadingRequestDetail.Start), api.Client.GetDetail(id), messages.Post(messages.LoadingRequestDetail.End),
+		messages.Post(messages.LoadingRequestDetail.Start), api.Client.GetDetail(id),
+		messages.Post(messages.LoadingRequestDetail.End),
 	)
 }
 
@@ -121,20 +126,27 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 		return messages.Post(msgType.Error)
 	}
 
-	// 如果返回的评论列表是空的, 那么就不再请求
+	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replyPage++
+	m.pagination = msgType.Pagination
 	m.replies = append(m.replies, msgType.Replies...)
-	if len(msgType.Replies) == 0 {
-		m.canRequestReply = false
-		return messages.Post(messages.ShowAutoTipsRequest{Text: "已无更多评论"})
+
+	cmds := []tea.Cmd{
+		messages.Post(
+			messages.ShowTipsRequest{
+				Text: fmt.Sprintf(
+					"评论分页: %d / %d (%d)", m.replyPage-1, m.pagination.Pages, m.pagination.Total,
+				),
+			},
+		),
 	}
 
-	if len(msgType.Replies) < 20 {
+	if m.replyPage > m.pagination.Pages {
 		m.canRequestReply = false
-		return messages.Post(messages.ShowAutoTipsRequest{Text: "已无更多评论"})
+		cmds = append(cmds, messages.Post(messages.ShowTipsRequest{Text: "没有更多了"}))
 	}
 
-	return nil
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) getReply(id int64) tea.Cmd {
@@ -148,7 +160,8 @@ func (m *Model) getReply(id int64) tea.Cmd {
 	}
 	m.requestingReply = true
 	return tea.Sequence(
-		messages.Post(messages.LoadingRequestReply.Start), api.Client.GetReply(id, m.replyPage), messages.Post(messages.LoadingRequestReply.End),
+		messages.Post(messages.LoadingRequestReply.Start), api.Client.GetReply(id, m.replyPage),
+		messages.Post(messages.LoadingRequestReply.End),
 	)
 }
 
@@ -163,16 +176,35 @@ func (m *Model) initViewport() {
 		content      strings.Builder
 	)
 	// 组装文案
-	content.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("V2EX > %s https://www.v2ex.com/t/%d", m.detail.Node.Title, m.detail.Id)))
+	content.WriteString(
+		lipgloss.NewStyle().Bold(true).Render(
+			fmt.Sprintf(
+				"V2EX > %s https://www.v2ex.com/t/%d", m.detail.Node.Title, m.detail.Id,
+			),
+		),
+	)
 	content.WriteString("\n\n")
-	content.WriteString(descStyle.Render(fmt.Sprintf("%s · %s · %d 回复", m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created), m.detail.Replies)))
+	content.WriteString(
+		descStyle.Render(
+			fmt.Sprintf(
+				"%s · %s · %d 回复", m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
+				m.detail.Replies,
+			),
+		),
+	)
 	content.WriteString("\n\n")
 	content.WriteString(wrap.String(m.detail.GetContent(), contentWidth))
 	content.WriteString("\n\n")
 
 	// 附言
 	for i, c := range m.detail.Supplements {
-		content.WriteString(descStyle.Render(fmt.Sprintf("第 %d 条附言 · %s", i+1, carbon.CreateFromTimestamp(c.Created))))
+		content.WriteString(
+			descStyle.Render(
+				fmt.Sprintf(
+					"第 %d 条附言 · %s", i+1, carbon.CreateFromTimestamp(c.Created),
+				),
+			),
+		)
 		content.WriteString("\n")
 		content.WriteString(c.GetContent())
 		content.WriteString("\n\n")
@@ -183,7 +215,13 @@ func (m *Model) initViewport() {
 	content.WriteString(descStyle.Bold(true).Render("回复列表"))
 	content.WriteString("\n\n")
 	for i, r := range m.replies {
-		content.WriteString(descStyle.Render(fmt.Sprintf("#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username)))
+		content.WriteString(
+			descStyle.Render(
+				fmt.Sprintf(
+					"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
+				),
+			),
+		)
 		content.WriteString("\n")
 		content.WriteString(r.GetContent())
 		content.WriteString("\n\n")

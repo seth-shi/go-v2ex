@@ -4,7 +4,8 @@ import "jaytaylor.com/html2text"
 
 type V2ReplyResponse struct {
 	V2ApiError
-	Result []V2ReplyResult `json:"result"`
+	Result     []V2ReplyResult `json:"result"`
+	Pagination Pagination      `json:"pagination"`
 }
 type V2ReplyResult struct {
 	Id              int    `json:"id"`

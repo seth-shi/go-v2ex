@@ -26,6 +26,6 @@ func (client *v2exClient) GetReply(id int64, page int) tea.Cmd {
 			return messages.GetRepliesResult{Error: fmt.Errorf("[%s]%s", rr.Status(), res.Message)}
 		}
 
-		return messages.GetRepliesResult{Replies: res.Result}
+		return messages.GetRepliesResult{Replies: res.Result, Pagination: res.Pagination}
 	}
 }

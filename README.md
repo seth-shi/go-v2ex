@@ -19,7 +19,7 @@
 #### 手动安装
   * 下载二进制文件 [https://github.com/seth-shi/go-v2ex/releases](https://github.com/seth-shi/go-v2ex/releases)
   * 放入环境变量中
-#### Golang 直装​ (依赖问题暂未解决)
+#### Golang 直装 (依赖问题暂未解决)
   * ~~`go install github.com/seth-shi/go-v2ex@latest`~~
 
 ### 使用
