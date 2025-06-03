@@ -33,6 +33,10 @@ var (
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b)
 	}()
+	sectionStyle = lipgloss.
+			NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			Bold(true)
 )
 
 type Model struct {
@@ -166,7 +170,7 @@ func (m *Model) getReply(id int64) tea.Cmd {
 }
 
 var (
-	descStyle = lipgloss.NewStyle().Underline(true)
+	descStyle = lipgloss.NewStyle().Padding(0, 1, 0, 1).Underline(true)
 )
 
 func (m *Model) initViewport() {
@@ -177,56 +181,44 @@ func (m *Model) initViewport() {
 	)
 	// 组装文案
 	content.WriteString(
-		lipgloss.NewStyle().Bold(true).Render(
-			fmt.Sprintf(
-				"V2EX > %s https://www.v2ex.com/t/%d", m.detail.Node.Title, m.detail.Id,
+		sectionStyle.
+			Width(config.Screen.Width).
+			Render(
+				fmt.Sprintf(
+					"V2EX > %s %s\n%s · %s · %d 回复\n%s",
+					m.detail.Node.Title, m.detail.Url,
+					m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
+					m.detail.Replies,
+					wrap.String(m.detail.GetContent(), contentWidth),
+				),
 			),
-		),
 	)
-	content.WriteString("\n\n")
-	content.WriteString(
-		descStyle.Render(
-			fmt.Sprintf(
-				"%s · %s · %d 回复", m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
-				m.detail.Replies,
-			),
-		),
-	)
-	content.WriteString("\n\n")
-	content.WriteString(wrap.String(m.detail.GetContent(), contentWidth))
 	content.WriteString("\n\n")
 
 	// 附言
 	for i, c := range m.detail.Supplements {
-		content.WriteString(
-			descStyle.Render(
-				fmt.Sprintf(
-					"第 %d 条附言 · %s", i+1, carbon.CreateFromTimestamp(c.Created),
-				),
-			),
+
+		desc := fmt.Sprintf(
+			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
+			c.GetContent(),
 		)
-		content.WriteString("\n")
-		content.WriteString(c.GetContent())
-		content.WriteString("\n\n")
+		content.WriteString(sectionStyle.Width(config.Screen.Width).Render(desc))
 	}
 
 	// 开始渲染评论
 	content.WriteString("\n\n")
-	content.WriteString(descStyle.Bold(true).Render("回复列表"))
-	content.WriteString("\n\n")
+	var replies strings.Builder
 	for i, r := range m.replies {
-		content.WriteString(
-			descStyle.Render(
-				fmt.Sprintf(
-					"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
-				),
+		replies.WriteString(
+			fmt.Sprintf(
+				"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
 			),
 		)
-		content.WriteString("\n")
-		content.WriteString(r.GetContent())
-		content.WriteString("\n\n")
+		replies.WriteString("\n")
+		replies.WriteString(r.GetContent())
+		replies.WriteString("\n\n")
 	}
-
+	content.WriteString(sectionStyle.Width(config.Screen.Width).Render(replies.String()))
 	m.viewport.SetContent(content.String())
 	m.viewportReady = true
 }

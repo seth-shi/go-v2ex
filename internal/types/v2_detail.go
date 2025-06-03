@@ -1,6 +1,8 @@
 package types
 
-import "jaytaylor.com/html2text"
+import (
+	"github.com/seth-shi/go-v2ex/internal/pkg"
+)
 
 type V2DetailResponse struct {
 	V2ApiError
@@ -52,21 +54,20 @@ type SupplementResult struct {
 }
 
 func (r V2DetailResult) GetContent() string {
-	if r.ContentRendered != "" {
-		if text, err := html2text.FromString(r.ContentRendered, html2text.Options{PrettyTables: true}); err == nil {
-			return text
-		}
+
+	var content = r.ContentRendered
+	if r.ContentRendered == "" {
+		content = r.Content
 	}
 
-	return r.Content
+	return pkg.SafeRenderHtml(content)
 }
 
 func (r SupplementResult) GetContent() string {
-	if r.ContentRendered != "" {
-		if text, err := html2text.FromString(r.ContentRendered, html2text.Options{PrettyTables: true}); err == nil {
-			return text
-		}
+	var content = r.ContentRendered
+	if r.ContentRendered == "" {
+		content = r.Content
 	}
 
-	return r.Content
+	return pkg.SafeRenderHtml(content)
 }

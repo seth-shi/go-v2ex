@@ -1,6 +1,8 @@
 package types
 
-import "jaytaylor.com/html2text"
+import (
+	"github.com/seth-shi/go-v2ex/internal/pkg"
+)
 
 type V2ReplyResponse struct {
 	V2ApiError
@@ -25,11 +27,10 @@ type V2ReplyResult struct {
 }
 
 func (r V2ReplyResult) GetContent() string {
-	if r.ContentRendered != "" {
-		if text, err := html2text.FromString(r.ContentRendered, html2text.Options{PrettyTables: true}); err == nil {
-			return text
-		}
+	var content = r.ContentRendered
+	if r.ContentRendered == "" {
+		content = r.Content
 	}
 
-	return r.Content
+	return pkg.SafeRenderHtml(content)
 }
