@@ -2,5 +2,5 @@ package consts
 
 const (
 	AppName    = "go-v2ex"
-	AppVersion = "v1.0.4"
+	AppVersion = "v1.1.0"
 )
