@@ -21,10 +21,6 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
-const (
-	keyHelp = "[n ←]"
-)
-
 var (
 	titleStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
@@ -41,6 +37,11 @@ var (
 			NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			Bold(true)
+	keyHelp = fmt.Sprintf(
+		"[%s/n b d %s]",
+		consts.AppKeyMap.Tab.Help().Key,
+		consts.AppKeyMap.Left.Help().Key,
+	)
 )
 
 type Model struct {
@@ -92,7 +93,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		// 回到首页
-		case msgType.String() == "n":
+		case key.Matches(msgType, consts.AppKeyMap.Tab),
+			msgType.String() == "n":
 			return m, m.getReply(m.id)
 		case key.Matches(msgType, consts.AppKeyMap.Left):
 			return m, messages.Post(messages.RedirectTopicsPage{})
