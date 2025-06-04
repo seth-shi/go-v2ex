@@ -37,7 +37,7 @@ var (
 			NewStyle().
 			Border(lipgloss.RoundedBorder())
 	keyHelp = fmt.Sprintf(
-		"[%s/n b d %s]",
+		"[n/%s b d %s/ctrl+q]",
 		consts.AppKeyMap.Tab.Help().Key,
 		consts.AppKeyMap.Left.Help().Key,
 	)
@@ -95,7 +95,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msgType, consts.AppKeyMap.Tab),
 			msgType.String() == "n":
 			return m, m.getReply(m.id)
-		case key.Matches(msgType, consts.AppKeyMap.Left):
+		case key.Matches(msgType, consts.AppKeyMap.Left), msgType.String() == "ctrl+q":
 			return m, messages.Post(messages.RedirectTopicsPage{})
 		}
 	}
