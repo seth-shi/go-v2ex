@@ -53,7 +53,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgType := msg.(type) {
 	// 其它地方负责回调这里去请求数据,
 	case messages.GetTopicsRequest:
-		config.Session.TopicPage = msgType.Page
 		m.requesting = true
 		// 默认进来是要给节点
 		return m, tea.Sequence(
@@ -98,16 +97,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case tea.KeyLeft:
-			if config.Session.TopicPage > 0 {
-				config.Session.TopicPage--
+			if config.Session.TopicPage > 1 {
 				m.requesting = true
-				return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage})
+				return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage - 1})
 			}
 			return m, nil
 		case tea.KeyRight:
-			config.Session.TopicPage++
 			m.requesting = true
-			return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage})
+			return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage + 1})
 		default:
 			return m, nil
 		}
@@ -154,6 +151,7 @@ func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
 		return messages.Post(msgType.Error)
 	}
 	m.topics = msgType.Topics
+	config.Session.TopicPage = msgType.Page
 	// 显示错误和页码
 	return messages.Post(messages.ShowTipsRequest{Text: fmt.Sprintf("第 %d 页", msgType.Page)})
 }

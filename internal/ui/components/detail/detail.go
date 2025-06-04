@@ -76,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
 		// 开启定时器去获取评论列表
 		return m, tea.Batch(
-			messages.Post(messages.ShowTipsRequest{Text: "按 n 更多评论 ←返回列表"}), m.getDetail(msgType.ID),
+			messages.Post(messages.ShowTipsRequest{Text: "n 下一页 ←返回列表"}), m.getDetail(msgType.ID),
 			m.getReply(msgType.ID),
 		)
 	case messages.GetDetailResult:
@@ -139,7 +139,7 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 		messages.Post(
 			messages.ShowTipsRequest{
 				Text: fmt.Sprintf(
-					"评论分页: %d / %d (%d)", m.replyPage-1, m.pagination.Pages, m.pagination.Total,
+					"%d / %d (%d) [n 下一页 ←返回列表]", m.replyPage-1, m.pagination.Pages, m.pagination.Total,
 				),
 			},
 		),
@@ -168,10 +168,6 @@ func (m *Model) getReply(id int64) tea.Cmd {
 		messages.Post(messages.LoadingRequestReply.End),
 	)
 }
-
-var (
-	descStyle = lipgloss.NewStyle().Padding(0, 1, 0, 1).Underline(true)
-)
 
 func (m *Model) initViewport() {
 	// 获取详情

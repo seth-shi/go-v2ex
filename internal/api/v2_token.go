@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dromara/carbon/v2"
 	"github.com/seth-shi/go-v2ex/internal/types"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
 func (client *v2exClient) GetToken() tea.Msg {
@@ -26,5 +25,11 @@ func (client *v2exClient) GetToken() tea.Msg {
 		return fmt.Errorf("[%s]%s", rr.Status(), res.Message)
 	}
 
-	return messages.ShowAutoTipsRequest{Text: fmt.Sprintf("token 有效期: %s", carbon.CreateFromTimestamp(res.Result.Created+res.Result.Expiration).String())}
+	// 准备过期的话, 发送提醒
+	expireAt := carbon.CreateFromTimestamp(res.Result.Created + res.Result.Expiration)
+	if !carbon.Now().AddDays(14).Gte(expireAt) {
+		return nil
+	}
+
+	return fmt.Errorf("token 将在%s过期,请注意更换", expireAt.String())
 }
