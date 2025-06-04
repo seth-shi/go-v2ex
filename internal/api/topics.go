@@ -28,7 +28,7 @@ var (
 	v1CacheTopics = make(map[string][]types.TopicComResult)
 	v1CacheLocker sync.Mutex
 	// v2 只预缓存一页
-	v2CacheTopics    []types.TopicComResult
+	v2CacheTopicsRes types.V2TopicResponse
 	v2CacheTopicsKey string
 	v2CacheLocker    sync.Mutex
 )
@@ -42,31 +42,34 @@ func (client *v2exClient) GetTopics(nodeIndex int, page int) tea.Cmd {
 		}
 
 		var (
-			nodeName = lo.NthOr(config.G.GetNodes(), nodeIndex, latestNode)
-			res      []types.TopicComResult
-			err      error
+			nodeName   = lo.NthOr(config.G.GetNodes(), nodeIndex, latestNode)
+			res        []types.TopicComResult
+			err        error
+			pagination *types.Pagination
 		)
 
 		// 请求的时候, 用数据的分页数据
 		switch nodeName {
 		case latestNode, hotNode:
-			res, err = client.getV1Topics(nodeName, page)
+			pagination, res, err = client.getV1Topics(nodeName, page)
 		default:
-			res, err = client.getV2Topics(nodeName, page)
+			pagination, res, err = client.getV2Topics(nodeName, page)
 		}
 
 		if err != nil {
 			return messages.GetTopicsResult{Error: err}
 		}
 
+		retPage := lo.FromPtr(pagination)
+		retPage.CurrPage = page
 		return messages.GetTopicsResult{
-			Topics: res,
-			Page:   page,
+			Topics:     res,
+			Pagination: retPage,
 		}
 	}
 }
 
-func (client *v2exClient) getV2Topics(nodeName string, page int) ([]types.TopicComResult, error) {
+func (client *v2exClient) getV2Topics(nodeName string, page int) (*types.Pagination, []types.TopicComResult, error) {
 
 	// 使用 V2 的接口
 	var (
@@ -75,7 +78,6 @@ func (client *v2exClient) getV2Topics(nodeName string, page int) ([]types.TopicC
 		err   error
 		// 从缓存中获取 key
 		cacheKey = fmt.Sprintf("%s_%d", nodeName, page)
-		cacheRes []types.TopicComResult
 		// 第一页返回: 0~0, 否则返回: 10~20
 		retOffset = lo.If(page%2 == 1, 0).Else(perPage)
 	)
@@ -84,31 +86,38 @@ func (client *v2exClient) getV2Topics(nodeName string, page int) ([]types.TopicC
 	v2CacheLocker.Lock()
 	if cacheKey == v2CacheTopicsKey {
 		// 截断前 10 个放在本页, 后 10 个缓存到下一页
-		cacheRes = lo.Subset(v2CacheTopics, retOffset, perPage)
+		v2Res = v2CacheTopicsRes
 	}
 	v2CacheLocker.Unlock()
-	if len(cacheRes) > 0 {
-		return cacheRes, nil
-	}
 
-	// 去请求 API 获取数据, api 分页需要处理一下
-	var (
-		apiRequestPage = (page + 1) / 2
-		requestUri     = fmt.Sprintf(v2TopicsUri, nodeName, apiRequestPage)
-	)
-	rr, err = client.
-		client.
-		R().
-		SetContext(context.Background()).
-		SetResult(&v2Res).
-		SetError(&v2Res).
-		Get(requestUri)
-	if err != nil {
-		return nil, err
-	}
+	// 如果没有缓存, 去接口里请求数据
+	if len(v2Res.Result) == 0 {
+		// 去请求 API 获取数据, api 分页需要处理一下
+		var (
+			apiRequestPage = (page + 1) / 2
+			requestUri     = fmt.Sprintf(v2TopicsUri, nodeName, apiRequestPage)
+		)
+		rr, err = client.
+			client.
+			R().
+			SetContext(context.Background()).
+			SetResult(&v2Res).
+			SetError(&v2Res).
+			Get(requestUri)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	if !v2Res.Success {
-		return nil, fmt.Errorf("[%s]%s", rr.Status(), v2Res.Message)
+		if !v2Res.Success {
+			return nil, nil, fmt.Errorf("[%s]%s", rr.Status(), v2Res.Message)
+		}
+
+		// 预先缓存一页, 由于接口返回 20 个一页, 这边使用切换调整成 10 个一页
+		v2Res.Pagination.ResetPages(perPage, v2Res.Pagination.Total)
+		v2CacheLocker.Lock()
+		defer v2CacheLocker.Unlock()
+		v2CacheTopicsKey = requestUri
+		v2CacheTopicsRes = v2Res
 	}
 
 	res := lo.Map(
@@ -123,15 +132,11 @@ func (client *v2exClient) getV2Topics(nodeName string, page int) ([]types.TopicC
 			}
 		},
 	)
-	// 预先缓存一页, 由于接口返回 20 个一页, 这边使用切换调整成 10 个一页
-	v2CacheLocker.Lock()
-	defer v2CacheLocker.Unlock()
-	v2CacheTopicsKey = requestUri
 	res = lo.Subset(res, retOffset, perPage)
-	return res, nil
+	return lo.ToPtr(v2Res.Pagination), res, nil
 }
 
-func (client *v2exClient) getV1Topics(nodeName string, page int) ([]types.TopicComResult, error) {
+func (client *v2exClient) getV1Topics(nodeName string, page int) (*types.Pagination, []types.TopicComResult, error) {
 
 	var (
 		v1Error types.V1ApiError
@@ -141,17 +146,21 @@ func (client *v2exClient) getV1Topics(nodeName string, page int) ([]types.TopicC
 		uri     = lo.If(nodeName == hotNode, hotUri).Else(latestUri)
 	)
 
+	// v1 接口没有分页, 所以我们伪造出来
+	pagination := &types.Pagination{}
+
 	// 大于第一页的, 只能从缓存中获取
 	v1CacheLocker.Lock()
 	res, exists := v1CacheTopics[uri]
 	v1CacheLocker.Unlock()
 	if exists {
+		pagination.ResetPages(perPage, len(res))
 		res = lo.Subset(res, (page-1)*perPage, perPage)
 		if len(res) > 0 {
-			return res, nil
+			return pagination, res, nil
 		}
 
-		return nil, errors.New("无更多数据")
+		return nil, nil, errors.New("无更多数据")
 	}
 
 	rr, err = client.
@@ -162,11 +171,11 @@ func (client *v2exClient) getV1Topics(nodeName string, page int) ([]types.TopicC
 		SetError(&v1Error).
 		Get(uri)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !v1Error.Success() {
-		return nil, fmt.Errorf("[%s]%s", rr.Status(), v1Error.Message)
+		return nil, nil, fmt.Errorf("[%s]%s", rr.Status(), v1Error.Message)
 	}
 
 	res = lo.Map(
@@ -186,6 +195,7 @@ func (client *v2exClient) getV1Topics(nodeName string, page int) ([]types.TopicC
 	v1CacheLocker.Lock()
 	defer v1CacheLocker.Unlock()
 	v1CacheTopics[uri] = res
+	pagination.ResetPages(perPage, len(res))
 
-	return lo.Subset(res, (page-1)*perPage, perPage), nil
+	return pagination, lo.Subset(res, (page-1)*perPage, perPage), nil
 }

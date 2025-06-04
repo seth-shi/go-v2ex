@@ -2,7 +2,6 @@ package topics
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -151,9 +150,10 @@ func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
 		return messages.Post(msgType.Error)
 	}
 	m.topics = msgType.Topics
-	config.Session.TopicPage = msgType.Page
+	config.Session.TopicPage = msgType.Pagination.CurrPage
 	// 显示错误和页码
-	return messages.Post(messages.ShowTipsRequest{Text: fmt.Sprintf("第 %d 页", msgType.Page)})
+	pageInfo := msgType.Pagination.ToString("[← → ↑ ↓ ↵ ⇥]")
+	return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
 }
 
 func (m *Model) renderTabs() string {

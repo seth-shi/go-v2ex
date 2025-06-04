@@ -2,7 +2,8 @@ package types
 
 type V2TopicResponse struct {
 	V2ApiError
-	Result []V2TopicResult `json:"result"`
+	Result     []V2TopicResult `json:"result"`
+	Pagination Pagination      `json:"pagination"`
 }
 type V2TopicResult struct {
 	Id              int64  `json:"id"`

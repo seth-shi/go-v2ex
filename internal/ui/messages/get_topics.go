@@ -9,8 +9,8 @@ type GetTopicsRequest struct {
 }
 
 type GetTopicsResult struct {
-	Topics []types.TopicComResult
-	Page   int
+	Topics     []types.TopicComResult
+	Pagination types.Pagination
 	// 监听者需要处理请求回调 (请求拦截)
 	Error error
 }

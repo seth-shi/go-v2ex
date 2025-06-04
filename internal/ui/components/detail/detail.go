@@ -21,6 +21,10 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
+const (
+	keyHelp = "[n ←]"
+)
+
 var (
 	titleStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
@@ -44,7 +48,6 @@ type Model struct {
 	viewportReady   bool
 	detail          types.V2DetailResult
 	replies         []types.V2ReplyResult
-	pagination      types.Pagination
 	canRequestReply bool
 
 	id              int64
@@ -74,9 +77,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.id = msgType.ID
 		m.replyPage = 1
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
-		// 开启定时器去获取评论列表
 		return m, tea.Batch(
-			messages.Post(messages.ShowTipsRequest{Text: "n 下一页 ←返回列表"}), m.getDetail(msgType.ID),
+			messages.Post(messages.ShowTipsRequest{Text: keyHelp}), m.getDetail(msgType.ID),
 			m.getReply(msgType.ID),
 		)
 	case messages.GetDetailResult:
@@ -132,20 +134,21 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 
 	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replyPage++
-	m.pagination = msgType.Pagination
 	m.replies = append(m.replies, msgType.Replies...)
 
-	cmds := []tea.Cmd{
-		messages.Post(
-			messages.ShowTipsRequest{
-				Text: fmt.Sprintf(
-					"%d / %d (%d) [n 下一页 ←返回列表]", m.replyPage-1, m.pagination.Pages, m.pagination.Total,
-				),
-			},
-		),
+	var cmds []tea.Cmd
+
+	if msgType.Pagination.Total > 0 {
+		cmds = append(
+			cmds, messages.Post(
+				messages.ShowTipsRequest{
+					Text: msgType.Pagination.ToString(keyHelp),
+				},
+			),
+		)
 	}
 
-	if m.replyPage > m.pagination.Pages {
+	if m.replyPage > msgType.Pagination.Pages {
 		m.canRequestReply = false
 		cmds = append(cmds, messages.Post(messages.ShowTipsRequest{Text: "没有更多了"}))
 	}
@@ -203,18 +206,21 @@ func (m *Model) initViewport() {
 
 	// 开始渲染评论
 	content.WriteString("\n\n")
-	var replies strings.Builder
-	for i, r := range m.replies {
-		replies.WriteString(
-			fmt.Sprintf(
-				"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
-			),
-		)
-		replies.WriteString("\n")
-		replies.WriteString(r.GetContent())
-		replies.WriteString("\n\n")
+	if len(m.replies) > 0 {
+		var replies strings.Builder
+		for i, r := range m.replies {
+			replies.WriteString(
+				fmt.Sprintf(
+					"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
+				),
+			)
+			replies.WriteString("\n")
+			replies.WriteString(r.GetContent())
+			replies.WriteString("\n\n")
+		}
+		content.WriteString(sectionStyle.Width(config.Screen.Width).Render(replies.String()))
 	}
-	content.WriteString(sectionStyle.Width(config.Screen.Width).Render(replies.String()))
+
 	m.viewport.SetContent(content.String())
 	m.viewportReady = true
 }
