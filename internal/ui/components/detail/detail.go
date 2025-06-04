@@ -35,8 +35,7 @@ var (
 	}()
 	sectionStyle = lipgloss.
 			NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Bold(true)
+			Border(lipgloss.RoundedBorder())
 	keyHelp = fmt.Sprintf(
 		"[%s/n b d %s]",
 		consts.AppKeyMap.Tab.Help().Key,
@@ -186,10 +185,14 @@ func (m *Model) initViewport() {
 			Width(config.Screen.Width).
 			Render(
 				fmt.Sprintf(
-					"V2EX > %s %s\n%s · %s · %d 回复\n%s",
+					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
 					m.detail.Node.Title, m.detail.Url,
 					m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
 					m.detail.Replies,
+					lipgloss.NewStyle().
+						Bold(true).
+						Border(lipgloss.RoundedBorder(), false, false, true, false).
+						Render(m.detail.Title),
 					wrap.String(m.detail.GetContent(), contentWidth),
 				),
 			),
@@ -211,11 +214,13 @@ func (m *Model) initViewport() {
 	if len(m.replies) > 0 {
 		var replies strings.Builder
 		for i, r := range m.replies {
-			replies.WriteString(
-				fmt.Sprintf(
-					"#%d · %s @%s", i+1, carbon.CreateFromTimestamp(r.Created), r.Member.Username,
-				),
+			floor := fmt.Sprintf(
+				"#%d · %s @%s",
+				i+1,
+				carbon.CreateFromTimestamp(r.Created),
+				r.Member.Username,
 			)
+			replies.WriteString(lipgloss.NewStyle().Bold(true).Render(floor))
 			replies.WriteString("\n")
 			replies.WriteString(r.GetContent())
 			replies.WriteString("\n\n")
