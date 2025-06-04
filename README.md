@@ -16,30 +16,19 @@
 
 ## 安装使用
 
-### 安装
-#### 手动安装
-  * 下载二进制文件 [https://github.com/seth-shi/go-v2ex/releases](https://github.com/seth-shi/go-v2ex/releases)
-  * 放入环境变量中
-#### Golang 直装
-  * `go install github.com/seth-shi/go-v2ex@latest`
+* 下载最新版本二进制文件
 
-### 使用
+| 系统      | CPU 架构     | 下载链接                                                                                                                    |
+|---------|------------|-------------------------------------------------------------------------------------------------------------------------|
+| Mac     | amd64      | [go-v2ex-darwin-amd64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-darwin-amd64.tar.gz) |
+| Mac     | arm64      | [go-v2ex-darwin-arm64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-darwin-arm64.tar.gz) |
+| Linux   | amd64      | [go-v2ex-linux-amd64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-linux-amd64.tar.gz)   |
+| Linux   | arm64      | [go-v2ex-linux-arm64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-linux-arm64.tar.gz)   |
+| Windows | amd64      | [go-v2ex-windows-amd64.zip](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-windows-amd64.zip)     |
+| Go      | 直装(免配环境遍历) | `go install github.com/seth-shi/go-v2ex@latest`                                                                         |
+* 解压压缩包中的二进制文件放到环境变量目录
 * 运行 `go-v2ex` 命令即可启动程序。
-* 首次运行会生成配置文件 `~/.go-v2ex.json`
 
-| 功能       | 快捷键          | 说明               |
-|----------|--------------|------------------|
-| 列表移动到上一个 | ↑            | 向上移动选择列表中的上一个条目  |
-| 列表移动到下一个 | ↓            | 向下移动选择列表中的下一个条目  |
-| 上一页      | ←            | 切换到上一页内容（如主题分页）  |
-| 下一页      | →            | 切换到下一页内容（如主题分页）  |
-| 查看帮助页面   | ?            | 进入帮助页面（再按一次返回首页） |
-| 进入配置页面   | `（反引号）       | 进入配置页面（再按一次返回首页） |
-| 切换下一个节点  | tab          | 切换到下一个节点         |
-| 切换上一个节点  | shift+tab    | 切换到上一个节点         |
-| 退出程序     | esc / ctrl+c | 直接退出客户端          |
-| 查看主题详情   | enter        | 查看当前选中的主题详情      |
-| 切换底部显示隐藏 | -（减号）        | 切换底部信息的显示/隐藏状态   |
 
 
 ## 感谢
