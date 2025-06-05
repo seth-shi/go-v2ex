@@ -7,16 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/seth-shi/go-v2ex/internal/api"
-
-	"github.com/seth-shi/go-v2ex/internal/config"
-
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 )
 
 var (
@@ -86,8 +85,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		leftSection  []string
-		rightSection = lipgloss.NewStyle().SetString(rightText)
+		leftSection []string
 	)
 
 	if len(m.errors) > 0 || len(m.loadings) > 0 || len(m.tips) > 0 || m.leftText != "" {
@@ -120,44 +118,46 @@ func (m Model) View() string {
 				)
 			},
 		)
-		leftSection = append(leftSection, lipgloss.NewStyle().Render(strings.Join(loadingText, "")))
+		leftSection = append(leftSection, styles.Hint.Render(strings.Join(loadingText, "")))
 	} else if config.G.ShowFooter {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
-		leftSection = append(leftSection, fmt.Sprintf(" %s %s", helpKey.Key, helpKey.Desc))
+		leftSection = append(leftSection, styles.Hint.Render(fmt.Sprintf(" %s %s", helpKey.Key, helpKey.Desc)))
 	}
 
 	padding := 1
 	leftContent := strings.Join(leftSection, " ")
 	footer := leftContent
 	if config.G.ShowFooter {
-		footer = lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			leftContent,
-			lipgloss.PlaceHorizontal(
-				config.Screen.Width-lipgloss.Width(leftContent)-2*padding,
-				lipgloss.Right,
-				rightSection.Render(),
+
+		var canHiddenFooter strings.Builder
+		canHiddenFooter.WriteString(
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				leftContent,
+				lipgloss.PlaceHorizontal(
+					config.Screen.Width-lipgloss.Width(leftContent)-2*padding,
+					lipgloss.Right,
+					styles.Hint.Render(rightText),
+				),
 			),
 		)
+
+		if api.LimitTotalCount.Load() > 0 {
+
+			screenWidth := config.Screen.GetContentWidth()
+			rate := float64(screenWidth) * float64(api.LimitRemainCount.Load()) / float64(api.LimitTotalCount.Load())
+			borderWidth := int(math.Round(rate))
+			canHiddenFooter.WriteString("\n")
+			canHiddenFooter.WriteString(strings.Repeat("♡", borderWidth))
+			canHiddenFooter.WriteString(strings.Repeat("_", screenWidth-borderWidth))
+		}
+		footer = canHiddenFooter.String()
 	}
 
-	var output strings.Builder
-	output.WriteString(
-		lipgloss.NewStyle().
-			Width(config.Screen.Width).
-			PaddingRight(padding).
-			Render(footer),
-	)
-
-	// 底部宽度
-	borderWidth := config.Screen.Width
-	if api.LimitTotalCount.Load() > 0 {
-		borderWidth = int(math.Ceil(float64(config.Screen.Width) * float64(api.LimitRemainCount.Load()) / float64(api.LimitTotalCount.Load())))
-	}
-	output.WriteString("\n")
-	output.WriteString(strings.Repeat("─", borderWidth))
-
-	return output.String()
+	return styles.
+		Hint.
+		Width(config.Screen.Width).
+		Render(footer)
 }
 
 func (m *Model) addAutoClearTips(text string) tea.Cmd {
