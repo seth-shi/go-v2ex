@@ -77,7 +77,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.replyPage = 1
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
 		return m, tea.Batch(
-			messages.Post(messages.ShowTipsRequest{Text: keyHelp}), m.getDetail(msgType.ID),
+			m.getDetail(msgType.ID),
 			m.getReply(msgType.ID),
 		)
 	case messages.GetDetailResult:
@@ -145,7 +145,7 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 
 	var cmds []tea.Cmd
 
-	if msgType.Pagination.Total > 0 {
+	if msgType.Pagination.Total > 0 && config.G.ShowFooter {
 		cmds = append(
 			cmds, messages.Post(
 				messages.ShowTipsRequest{
@@ -186,6 +186,7 @@ func (m *Model) initViewport() {
 		content      strings.Builder
 	)
 	// 组装文案
+	// 找到所有图片去动态替换成字符串
 	content.WriteString(
 		sectionStyle.
 			Width(config.Screen.Width).

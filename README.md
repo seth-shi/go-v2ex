@@ -13,7 +13,7 @@
 | Linux   | amd64      | [go-v2ex-linux-amd64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-linux-amd64.tar.gz)   |
 | Linux   | arm64      | [go-v2ex-linux-arm64.tar.gz](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-linux-arm64.tar.gz)   |
 | Windows | amd64      | [go-v2ex-windows-amd64.zip](https://github.com/seth-shi/go-v2ex/releases/latest/download/go-v2ex-windows-amd64.zip)     |
-| Go      | 直装(免配环境遍历) | `go install github.com/seth-shi/go-v2ex@latest`                                                                         |
+| Go      | 直装(免配环境变量) | `go install github.com/seth-shi/go-v2ex@latest`                                                                         |
 * 解压压缩包中的二进制文件放到环境变量目录
 * 运行 `go-v2ex` 命令即可启动程序。
 
@@ -53,6 +53,10 @@
   }
 }
 ```
+
+## TODO 
+- [ ] 终端显示图片
+
 ## 感谢
 * [https://github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
 * [https://github.com/charmbracelet/bubbles](https://github.com/charmbracelet/bubbles)

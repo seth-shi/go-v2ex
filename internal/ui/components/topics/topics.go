@@ -150,8 +150,12 @@ func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
 	m.topics = msgType.Topics
 	config.Session.TopicPage = msgType.Pagination.CurrPage
 	// 显示错误和页码
-	pageInfo := msgType.Pagination.ToString(keyHelp)
-	return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
+	if config.G.ShowFooter {
+		pageInfo := msgType.Pagination.ToString(keyHelp)
+		return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
+	}
+
+	return nil
 }
 
 func (m *Model) renderTabs() string {
