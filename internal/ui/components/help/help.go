@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 )
 
 type Model struct {
@@ -34,7 +35,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 
-	more := "\n如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行"
+	more := styles.Bold.Render("\n如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行")
 
 	return lipgloss.
 		NewStyle().

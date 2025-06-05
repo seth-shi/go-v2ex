@@ -132,17 +132,6 @@ func (m Model) initHomePage(err error) tea.Cmd {
 		config.SaveToFile(""),
 	}
 
-	// + 1 保存
-	config.G.LaunchesCount++
-	if config.G.LaunchesCount == 1 {
-		cmds = append(
-			cmds,
-			messages.Post(messages.RedirectPageRequest{ContentModel: routes.HelpModel}),
-			messages.Post(messages.ShowAutoTipsRequest{Text: "首次启动请先仔细阅读帮助页"}),
-		)
-		return tea.Sequence(cmds...)
-	}
-
 	// 没 token 去配置页面
 	if config.G.Token == "" {
 		cmds = append(

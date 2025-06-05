@@ -7,6 +7,7 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,9 +29,6 @@ var (
 	tipStyle = lipgloss.NewStyle().
 			Padding(1, 1, 0, 1)
 
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Padding(1, 1, 0, 1)
 	formsCount = 4
 )
 
@@ -173,9 +171,10 @@ func (m Model) saveSettings() tea.Cmd {
 func (m Model) View() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("tab 切换表单, 回车确认"))
+	b.WriteString(styles.Err.PaddingLeft(1).Render("tab 切换表单, 回车确认(如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行)"))
+	b.WriteString("\n")
 	text := fmt.Sprintf("配置文件路径: %s", config.SavePath())
-	b.WriteString(titleStyle.Render(text))
+	b.WriteString(styles.Bold.PaddingLeft(1).Render(text))
 
 	if len(m.inputs) > 0 {
 		text := fmt.Sprintf(
