@@ -13,6 +13,7 @@ type KeyMap struct {
 	SettingPage    key.Binding
 	Quit           key.Binding
 	Tab            key.Binding
+	Back           key.Binding
 	ShiftTab       key.Binding
 	Enter          key.Binding
 	SwitchShowMode key.Binding
@@ -32,27 +33,31 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter}, // first column
-		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode},       // second column
+		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back}, // first column
+		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode},               // second column
 	}
 }
 
 var AppKeyMap = KeyMap{
 	Up: key.NewBinding(
-		key.WithKeys("up"),
-		key.WithHelp("↑", "[主题页]移动到上一个"),
+		key.WithKeys("w", "up"),
+		key.WithHelp("w/↑", "[主题页]移动到上一个"),
 	),
 	Down: key.NewBinding(
-		key.WithKeys("down"),
-		key.WithHelp("↓", "[主题页]列表移动到下一个"),
+		key.WithKeys("s", "down"),
+		key.WithHelp("s/↓", "[主题页]列表移动到下一个"),
 	),
 	Left: key.NewBinding(
-		key.WithKeys("left"),
-		key.WithHelp("←", "[主题页]上一页"),
+		key.WithKeys("a", "left"),
+		key.WithHelp("a/←", "[主题页]上一页"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("right"),
-		key.WithHelp("→", "[主题页]下一页"),
+		key.WithKeys("d", "right"),
+		key.WithHelp("d/→", "[主题页]下一页"),
+	),
+	Back: key.NewBinding(
+		key.WithKeys("q"),
+		key.WithHelp("q", "返回上一页"),
 	),
 	HelpPage: key.NewBinding(
 		key.WithKeys("?"),
@@ -75,8 +80,8 @@ var AppKeyMap = KeyMap{
 		key.WithHelp("esc", "退出程序"),
 	),
 	Enter: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "[主题页]查看主题详情"),
+		key.WithKeys("e", "enter"),
+		key.WithHelp("e/enter", "[主题页]查看主题详情"),
 	),
 	SwitchShowMode: key.NewBinding(
 		key.WithKeys("-"),

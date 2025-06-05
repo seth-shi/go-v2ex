@@ -30,6 +30,29 @@
 ![详情页](assets/3.png)
 
 
+
+## 帮助
+### 设置默认终端代理
+  * 确认已开启**Clash**等代理软件,
+#### JetBrains
+  * **设置** -> **工具** -> **终端** --> **项目设置:代环境变量**填入以下值
+  * `http_proxy=http://127.0.0.1:7897;https_proxy=http://127.0.0.1:7897`
+  * 随后打开一个新的终端窗口，开始享受~~~
+#### vscode
+* 打开设置, 搜索`terminal.integrated.env`
+* 点击**在 settings.json 中编辑**, 增加以下配置
+```json
+{
+  "terminal.integrated.env.linux": {
+    "HTTP_PROXY": "http://127.0.0.1:7897",
+    "HTTPS_PROXY": "http://127.0.0.1:7897"
+  },
+  "terminal.integrated.env.windows": {
+    "HTTP_PROXY": "http://127.0.0.1:7897",
+    "HTTPS_PROXY": "http://127.0.0.1:7897"
+  }
+}
+```
 ## 感谢
 * [https://github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
 * [https://github.com/charmbracelet/bubbles](https://github.com/charmbracelet/bubbles)

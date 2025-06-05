@@ -21,6 +21,8 @@ import (
 	"github.com/dromara/carbon/v2"
 )
 
+const keyHelp = "[a/d翻页 w/s选择 e详情 tab/shift+tab节点]"
+
 var (
 	cellStyle         = lipgloss.NewStyle().Padding(0, 1).Width(5)
 	headerStyle       = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
@@ -72,36 +74,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.moveTabs(1)
 		case key.Matches(msgType, consts.AppKeyMap.ShiftTab):
 			return m, m.moveTabs(-1)
-		}
-
-		switch msgType.Type {
-		case tea.KeyEnter:
+		case key.Matches(msgType, consts.AppKeyMap.Enter):
 			// 查看详情
 			curr := lo.NthOrEmpty(m.topics, config.Session.TopicActiveIndex)
 			if curr.Id == 0 {
 				return m, messages.Post(errors.New("查看无效的主题"))
 			}
-
 			return m, messages.Post(messages.RedirectDetailRequest{Id: curr.Id})
-		case tea.KeyUp:
+		case key.Matches(msgType, consts.AppKeyMap.Up):
 			config.Session.TopicActiveIndex--
 			if config.Session.TopicActiveIndex < 0 {
 				config.Session.TopicActiveIndex = max(0, len(m.topics)-1)
 			}
 			return m, nil
-		case tea.KeyDown:
+		case key.Matches(msgType, consts.AppKeyMap.Down):
 			config.Session.TopicActiveIndex++
 			if config.Session.TopicActiveIndex >= len(m.topics) {
 				config.Session.TopicActiveIndex = 0
 			}
 			return m, nil
-		case tea.KeyLeft:
+		case key.Matches(msgType, consts.AppKeyMap.Left):
 			if config.Session.TopicPage > 1 {
 				m.requesting = true
 				return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage - 1})
 			}
 			return m, nil
-		case tea.KeyRight:
+		case key.Matches(msgType, consts.AppKeyMap.Right):
 			m.requesting = true
 			return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage + 1})
 		default:
@@ -152,7 +150,7 @@ func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
 	m.topics = msgType.Topics
 	config.Session.TopicPage = msgType.Pagination.CurrPage
 	// 显示错误和页码
-	pageInfo := msgType.Pagination.ToString("[← → ↑ ↓ ↵ ⇥]")
+	pageInfo := msgType.Pagination.ToString(keyHelp)
 	return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
 }
 

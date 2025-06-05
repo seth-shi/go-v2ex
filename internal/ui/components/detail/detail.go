@@ -21,6 +21,10 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 )
 
+const (
+	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页]"
+)
+
 var (
 	titleStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
@@ -36,11 +40,6 @@ var (
 	sectionStyle = lipgloss.
 			NewStyle().
 			Border(lipgloss.RoundedBorder())
-	keyHelp = fmt.Sprintf(
-		"[n/%s b d %s/ctrl+q]",
-		consts.AppKeyMap.Tab.Help().Key,
-		consts.AppKeyMap.Left.Help().Key,
-	)
 )
 
 type Model struct {
@@ -91,12 +90,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.initViewport()
 	case tea.KeyMsg:
 		switch {
-		// 回到首页
-		case key.Matches(msgType, consts.AppKeyMap.Tab),
-			msgType.String() == "n":
+		case key.Matches(msgType, consts.AppKeyMap.Enter):
 			return m, m.getReply(m.id)
-		case key.Matches(msgType, consts.AppKeyMap.Left), msgType.String() == "ctrl+q":
+		// 回到首页
+		case key.Matches(msgType, consts.AppKeyMap.Back):
 			return m, messages.Post(messages.RedirectTopicsPage{})
+		case key.Matches(msgType, consts.AppKeyMap.Up):
+			msg = tea.KeyMsg{Type: tea.KeyUp}
+		case key.Matches(msgType, consts.AppKeyMap.Down):
+			msg = tea.KeyMsg{Type: tea.KeyDown}
+		case key.Matches(msgType, consts.AppKeyMap.Left):
+			msg = tea.KeyMsg{Type: tea.KeyPgUp}
+		case key.Matches(msgType, consts.AppKeyMap.Right):
+			msg = tea.KeyMsg{Type: tea.KeyPgDown}
 		}
 	}
 

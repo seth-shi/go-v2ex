@@ -2,6 +2,8 @@ package types
 
 import (
 	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Pagination struct {
@@ -23,12 +25,16 @@ func (p *Pagination) ResetPages(perPage, total int) *Pagination {
 	return p
 }
 
+var (
+	dimStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#999999"))
+)
+
 func (p Pagination) ToString(ext string) string {
 	return fmt.Sprintf(
-		"%d / %d (%d) %s",
+		"╭─ %d/%d • %d条  %s",
 		p.CurrPage,
 		p.Pages,
 		p.Total,
-		ext,
+		dimStyle.Render(ext),
 	)
 }

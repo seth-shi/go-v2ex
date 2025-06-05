@@ -123,7 +123,7 @@ func (m Model) View() string {
 		leftSection = append(leftSection, lipgloss.NewStyle().Render(strings.Join(loadingText, "")))
 	} else if config.G.ShowFooter {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
-		leftSection = append(leftSection, fmt.Sprintf("%s %s", helpKey.Key, helpKey.Desc))
+		leftSection = append(leftSection, fmt.Sprintf(" %s %s", helpKey.Key, helpKey.Desc))
 	}
 
 	padding := 1
@@ -145,7 +145,6 @@ func (m Model) View() string {
 	output.WriteString(
 		lipgloss.NewStyle().
 			Width(config.Screen.Width).
-			PaddingLeft(padding).
 			PaddingRight(padding).
 			Render(footer),
 	)
