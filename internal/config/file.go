@@ -18,7 +18,8 @@ var (
 )
 
 type fileConfig struct {
-	Token      string `json:"personal_access_token"`
+	// NOTE: 增加默认秘钥, 方便用户快速使用, 用户以后还是要自己配置
+	Token      string `json:"personal_access_token" default:"35bbd155-df12-4778-9916-5dd59d967fef"`
 	Nodes      string `json:"nodes" default:"latest,hot,qna,all4all,programmer,jobs,share,apple,create,macos,career,pointless"`
 	Timeout    uint   `json:"timeout" default:"5"`
 	ShowFooter bool   `json:"show_footer" default:"true"`

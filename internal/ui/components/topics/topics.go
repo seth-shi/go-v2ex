@@ -21,7 +21,7 @@ import (
 	"github.com/dromara/carbon/v2"
 )
 
-const keyHelp = "[a/d:翻页 w/s:选择 e:详情 tab/shift+tab:节点 空格:老板键]"
+const keyHelp = "[a/d:翻页 w/s:选择 e:详情 tab/shift+tab:节点 空格:老板键 `:设置页 ?:帮助页]"
 
 var (
 	cellStyle         = lipgloss.NewStyle().Padding(0, 1).Width(5)

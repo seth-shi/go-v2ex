@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页]"
+	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页 -:隐藏页脚]"
 )
 
 var (
