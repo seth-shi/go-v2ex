@@ -11,6 +11,7 @@ type KeyMap struct {
 	Right          key.Binding
 	HelpPage       key.Binding
 	SettingPage    key.Binding
+	Space          key.Binding
 	Quit           key.Binding
 	Tab            key.Binding
 	Back           key.Binding
@@ -34,7 +35,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back}, // first column
-		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode},               // second column
+		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},      // second column
 	}
 }
 
@@ -70,6 +71,10 @@ var AppKeyMap = KeyMap{
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "[主题页]切换下一个节点"),
+	),
+	Space: key.NewBinding(
+		key.WithKeys(" "),
+		key.WithHelp("空格键", "老板键"),
 	),
 	ShiftTab: key.NewBinding(
 		key.WithKeys("shift+tab"),

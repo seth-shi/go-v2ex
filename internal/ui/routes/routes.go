@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/seth-shi/go-v2ex/internal/ui/components/boss"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/detail"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/help"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/setting"
@@ -9,9 +10,10 @@ import (
 )
 
 var (
-	HelpModel    = help.New()
-	SettingModel = setting.New()
-	TopicsModel  = topics.New()
-	SplashModel  = splash.New()
-	DetailModel  = detail.New()
+	HelpModel       = help.New()
+	SettingModel    = setting.New()
+	TopicsModel     = topics.New()
+	SplashModel     = splash.New()
+	BossComingModel = boss.New()
+	DetailModel     = detail.New()
 )

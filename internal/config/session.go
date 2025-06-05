@@ -8,4 +8,5 @@ var (
 type sessionData struct {
 	TopicPage        int
 	TopicActiveIndex int
+	BossComingMode   bool
 }
