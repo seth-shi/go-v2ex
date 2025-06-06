@@ -79,7 +79,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.returnPage(routes.HelpModel)
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
 			config.G.SwitchShowMode()
-			return m, config.SaveToFile("")
+			return m, tea.Batch(
+				config.SaveToFile(""),
+				messages.Post(messages.ShowTipsRequest{Text: ""}),
+				messages.Post(messages.ShowAutoTipsRequest{Text: config.G.GetShowModeText()}),
+			)
 		case key.Matches(msgType, consts.AppKeyMap.Quit):
 			return m, tea.Quit
 		}

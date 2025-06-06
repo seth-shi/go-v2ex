@@ -91,18 +91,15 @@ func (m Model) View() string {
 	if len(m.errors) > 0 || len(m.loadings) > 0 || len(m.tips) > 0 || m.leftText != "" {
 
 		if m.leftText != "" {
-			leftSection = append(leftSection, m.leftText)
+			leftSection = append(leftSection, styles.Hint.Render(m.leftText))
 		}
 
 		leftSection = append(
-			leftSection, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#ff5722")).
-				Render(strings.Join(m.errors, " / ")),
+			leftSection, styles.Err.Render(strings.Join(m.errors, " / ")),
 		)
 
 		leftSection = append(
-			leftSection, lipgloss.NewStyle().
-				Render(strings.Join(m.tips, " / ")),
+			leftSection, styles.Hint.Render(strings.Join(m.tips, " / ")),
 		)
 
 		loadingKeys := lo.Keys(m.loadings)
@@ -119,7 +116,7 @@ func (m Model) View() string {
 			},
 		)
 		leftSection = append(leftSection, styles.Hint.Render(strings.Join(loadingText, "")))
-	} else if config.G.ShowFooter {
+	} else if config.G.ShowFooter() {
 		helpKey := consts.AppKeyMap.HelpPage.Help()
 		leftSection = append(leftSection, styles.Hint.Render(fmt.Sprintf(" %s %s", helpKey.Key, helpKey.Desc)))
 	}
@@ -127,7 +124,7 @@ func (m Model) View() string {
 	padding := 1
 	leftContent := strings.Join(leftSection, " ")
 	footer := leftContent
-	if config.G.ShowFooter {
+	if config.G.ShowFooter() {
 
 		var canHiddenFooter strings.Builder
 		canHiddenFooter.WriteString(
@@ -142,7 +139,7 @@ func (m Model) View() string {
 			),
 		)
 
-		if api.LimitTotalCount.Load() > 0 {
+		if config.G.ShowLimit() && api.LimitTotalCount.Load() > 0 {
 
 			screenWidth := config.Screen.GetContentWidth()
 			rate := float64(screenWidth) * float64(api.LimitRemainCount.Load()) / float64(api.LimitTotalCount.Load())

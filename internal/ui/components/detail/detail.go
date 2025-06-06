@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 
 	"github.com/dromara/carbon/v2"
@@ -145,11 +146,12 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 
 	var cmds []tea.Cmd
 
-	if msgType.Pagination.Total > 0 && config.G.ShowFooter {
+	if msgType.Pagination.Total > 0 && config.G.ShowPage() {
+		help := lo.If(config.G.ShowHelp(), keyHelp).Else("")
 		cmds = append(
 			cmds, messages.Post(
 				messages.ShowTipsRequest{
-					Text: msgType.Pagination.ToString(keyHelp),
+					Text: msgType.Pagination.ToString(help),
 				},
 			),
 		)

@@ -150,8 +150,9 @@ func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
 	m.topics = msgType.Topics
 	config.Session.TopicPage = msgType.Pagination.CurrPage
 	// 显示错误和页码
-	if config.G.ShowFooter {
-		pageInfo := msgType.Pagination.ToString(keyHelp)
+	if config.G.ShowPage() {
+		help := lo.If(config.G.ShowHelp(), keyHelp).Else("")
+		pageInfo := msgType.Pagination.ToString(help)
 		return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
 	}
 
@@ -176,11 +177,11 @@ func (m *Model) renderTabs() string {
 		border, _, _, _, _ := style.GetBorder()
 		if isFirst && isActive {
 			border.BottomLeft = "│"
-		} else if isFirst && !isActive {
+		} else if isFirst {
 			border.BottomLeft = "├"
 		} else if isLast && isActive {
 			border.BottomRight = "│"
-		} else if isLast && !isActive {
+		} else if isLast {
 			border.BottomRight = "┤"
 		}
 		style = style.Border(border)
