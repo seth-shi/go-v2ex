@@ -48,6 +48,7 @@ type Model struct {
 	viewportReady bool
 	detail        response.V2DetailResult
 	replies       []response.V2ReplyResult
+	canLoadReply  bool
 
 	id        int64
 	replyPage int
@@ -72,7 +73,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 获取内容 + 第一页的评论
 		m.viewportReady = false
 		m.id = msgType.ID
-		m.replyPage = 1
+		m.replyPage = 0
+		m.canLoadReply = true
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
 		return m, tea.Batch(
 			m.getDetail(msgType.ID),
@@ -135,9 +137,8 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
-	m.replyPage = data.Pagination.CurrPage + 1
-
 	m.replies = append(m.replies, msgType.Data.Result...)
+	m.replyPage = data.Pagination.CurrPage
 	var cmds []tea.Cmd
 	if data.Pagination.TotalCount > 0 {
 		cmds = append(
@@ -150,8 +151,8 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 		)
 	}
 
-	if m.replyPage > data.Pagination.TotalPages {
-		cmds = append(cmds, messages.Post(messages.ShowAlertRequest{Text: "没有更多了"}))
+	if m.replyPage >= data.Pagination.TotalPages {
+		m.canLoadReply = false
 	}
 
 	return tea.Batch(cmds...)
@@ -163,9 +164,13 @@ func (m *Model) getReply(id int64) tea.Cmd {
 		return messages.Post(errors.New("评论请求中"))
 	}
 
+	if !m.canLoadReply {
+		return messages.Post(errors.New("已无更多评论"))
+	}
+
 	return tea.Sequence(
 		messages.LoadingRequestReply.PostStart(),
-		api.V2ex.GetReply(context.Background(), id, m.replyPage),
+		api.V2ex.GetReply(context.Background(), id, m.replyPage+1),
 		messages.LoadingRequestReply.PostEnd(),
 	)
 }
