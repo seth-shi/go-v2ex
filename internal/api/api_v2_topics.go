@@ -60,11 +60,11 @@ func (client *v2exClient) getV2Topics(ctx context.Context, nodeName string, page
 			SetError(&v2Res).
 			Get(requestUri)
 		if err != nil {
-			return nil, err
+			return nil, errorWrapper("主题", err)
 		}
 
 		if !v2Res.IsSuccess() {
-			return nil, fmt.Errorf("主题[%s]%s", rr.Status(), v2Res.Message)
+			return nil, errorWrapper("主题", fmt.Errorf("[%s]%s", rr.Status(), v2Res.Message))
 		}
 
 		// 预先缓存一页, 由于接口返回 20 个一页, 这边使用切换调整成 10 个一页

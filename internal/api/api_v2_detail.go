@@ -20,11 +20,11 @@ func (client *v2exClient) GetDetail(ctx context.Context, id int64) tea.Cmd {
 			Get(fmt.Sprintf("/api/v2/topics/%d", id))
 
 		if err != nil {
-			return err
+			return errorWrapper("详情", err)
 		}
 
 		if !res.IsSuccess() {
-			return fmt.Errorf("[%s]%s", rr.Status(), res.Message)
+			return errorWrapper("详情", fmt.Errorf("[%s]%s", rr.Status(), res.Message))
 		}
 
 		return messages.GetDetailResponse{Data: res.Result}

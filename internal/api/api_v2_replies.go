@@ -20,11 +20,11 @@ func (client *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.
 			Get(fmt.Sprintf("/api/v2/topics/%d/replies?p=%d", id, page))
 
 		if err != nil {
-			return err
+			return errorWrapper("回复", err)
 		}
 
 		if !res.IsSuccess() {
-			return fmt.Errorf("[%s]%s", rr.Status(), res.Message)
+			return errorWrapper("回复", fmt.Errorf("[%s]%s", rr.Status(), res.Message))
 		}
 
 		res.Pagination.CurrPage = page

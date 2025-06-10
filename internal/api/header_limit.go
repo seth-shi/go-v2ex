@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
 
 const (
@@ -20,6 +21,9 @@ func (client *v2exClient) setRateLimitHandler(c *resty.Client, r *resty.Response
 	remain, err := strconv.ParseInt(r.Header().Get(headerRemain), 10, 64)
 	if err == nil {
 		client.limitRemainCount.Store(remain)
+		if remain == 0 {
+			return response.ErrTokenLimit
+		}
 	}
 
 	return nil

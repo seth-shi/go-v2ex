@@ -19,11 +19,11 @@ func (client *v2exClient) GetToken(ctx context.Context) tea.Cmd {
 			Get("/api/v2/token")
 
 		if err != nil {
-			return err
+			return errorWrapper("令牌", err)
 		}
 
 		if !res.IsSuccess() {
-			return fmt.Errorf("[会话:%s]%s", rr.Status(), res.Message)
+			return errorWrapper("令牌", fmt.Errorf("[%s]%s", rr.Status(), res.Message))
 		}
 
 		// 准备过期的话, 发送提醒
@@ -32,6 +32,6 @@ func (client *v2exClient) GetToken(ctx context.Context) tea.Cmd {
 			return nil
 		}
 
-		return fmt.Errorf("token 将在%s过期,请注意更换", expireAt.String())
+		return errorWrapper("令牌", fmt.Errorf("将在%s过期,请注意更换", expireAt.String()))
 	}
 }

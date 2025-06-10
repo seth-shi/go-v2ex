@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/alphadose/haxmap"
@@ -20,8 +19,7 @@ const (
 
 var (
 	// 最新最大
-	v1CacheTopics   = haxmap.New[string, response.Topic](3)
-	ErrorNoMoreData = errors.New("无更多数据")
+	v1CacheTopics = haxmap.New[string, response.Topic](3)
 )
 
 func (client *v2exClient) getV1Topics(
@@ -50,11 +48,11 @@ func (client *v2exClient) getV1Topics(
 			SetError(&v1Error).
 			Get(uri)
 		if err != nil {
-			return nil, err
+			return nil, errorWrapper("主题", err)
 		}
 
 		if !v1Error.IsSuccess() {
-			return nil, fmt.Errorf("主题[%s]%s", rr.Status(), v1Error.Message)
+			return nil, errorWrapper("主题", fmt.Errorf("[%s]%s", rr.Status(), v1Error.Message))
 		}
 
 		topics := lo.Map(
@@ -81,7 +79,7 @@ func (client *v2exClient) getV1Topics(
 	res.Pagination.ResetPerPageTo10()
 	res.Items = lo.Subset(res.Items, (page-1)*perPage, perPage)
 	if len(res.Items) == 0 {
-		return nil, ErrorNoMoreData
+		return nil, errorWrapper("主题", response.ErrNoMoreData)
 	}
 
 	return &res, nil

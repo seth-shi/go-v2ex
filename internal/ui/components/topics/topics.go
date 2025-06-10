@@ -113,6 +113,7 @@ func (m Model) View() string {
 		doc strings.Builder
 	)
 	doc.WriteString(m.renderTabs())
+	doc.WriteString("\n")
 	doc.WriteString(m.renderTables())
 	return doc.String()
 }

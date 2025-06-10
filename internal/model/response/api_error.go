@@ -5,9 +5,9 @@ import (
 )
 
 var (
-	ErrNoMoreData   = errors.New("无更多数据")
-	ErrTokenExpired = errors.New("令牌已过期")
-	ErrTokenLimit   = errors.New("令牌已被限制请求,请稍后再试")
+	ErrNoMoreData     = errors.New("无更多数据")
+	ErrTokenLimit     = errors.New("令牌已被限制请求,请稍后再试")
+	ErrRequestTimeout = errors.New("请求超时,请确保已配置代理")
 )
 
 type V2ApiError struct {
