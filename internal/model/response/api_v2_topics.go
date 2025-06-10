@@ -1,10 +1,11 @@
-package types
+package response
 
-type V2TopicResponse struct {
+type V2Topic struct {
 	V2ApiError
 	Result     []V2TopicResult `json:"result"`
-	Pagination Pagination      `json:"pagination"`
+	Pagination Page            `json:"pagination"`
 }
+
 type V2TopicResult struct {
 	Id              int64  `json:"id"`
 	Title           string `json:"title"`
@@ -17,13 +18,4 @@ type V2TopicResult struct {
 	Created         int    `json:"created"`
 	LastModified    int64  `json:"last_modified"`
 	LastTouched     int64  `json:"last_touched"`
-}
-
-type TopicComResult struct {
-	Id          int64  `json:"id"`
-	Node        string `json:"node"`
-	Title       string `json:"title"`
-	Member      string `json:"member"`
-	LastTouched int64  `json:"last_touched"`
-	Replies     int    `json:"replies"`
 }

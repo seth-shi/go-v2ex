@@ -11,7 +11,7 @@ import (
 	"github.com/mcuadros/go-defaults"
 	"github.com/mitchellh/go-homedir"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 )
 
 var (
@@ -43,7 +43,7 @@ func (c *fileConfig) GetShowModeText() string {
 	var (
 		m = map[int]string{
 			consts.ShowModeHidden:                "隐藏所有底部",
-			consts.ShowModeLeftAndRight:          "不显示帮助",
+			consts.ShowModeLeftAndRight:          "不显示请求限制",
 			consts.ShowModeLeftAndRightWithLimit: "显示左侧和右侧+请求限制量",
 			consts.ShowModeAll:                   "显示所有",
 		}
@@ -58,12 +58,6 @@ func (c *fileConfig) ShowFooter() bool {
 
 func (c *fileConfig) ShowHelp() bool {
 	return c.ShowMode == consts.ShowModeAll
-}
-
-func (c *fileConfig) ShowPage() bool {
-	return c.ShowMode == consts.ShowModeLeftAndRight ||
-		c.ShowMode == consts.ShowModeLeftAndRightWithLimit ||
-		c.ShowMode == consts.ShowModeAll
 }
 
 func (c *fileConfig) ShowLimit() bool {
@@ -102,7 +96,7 @@ func SaveToFile(title string) tea.Cmd {
 			return nil
 		}
 
-		return messages.ShowAutoTipsRequest{Text: title}
+		return messages.ShowToastRequest{Text: title}
 	}
 }
 

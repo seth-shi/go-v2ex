@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.3
+	github.com/alphadose/haxmap v1.4.1
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/glamour v0.10.0

@@ -1,29 +1,29 @@
 package detail
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/model/response"
 
 	"github.com/dromara/carbon/v2"
 	"github.com/muesli/reflow/wrap"
 	"github.com/seth-shi/go-v2ex/internal/api"
-	"github.com/seth-shi/go-v2ex/internal/types"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/config"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 )
 
 const (
-	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页 -:隐藏页脚]"
+	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页 -:显示页脚]"
 )
 
 var (
@@ -44,15 +44,13 @@ var (
 )
 
 type Model struct {
-	viewport        viewport.Model
-	viewportReady   bool
-	detail          types.V2DetailResult
-	replies         []types.V2ReplyResult
-	canRequestReply bool
+	viewport      viewport.Model
+	viewportReady bool
+	detail        response.V2DetailResult
+	replies       []response.V2ReplyResult
 
-	id              int64
-	replyPage       int
-	requestingReply bool
+	id        int64
+	replyPage int
 }
 
 func New() Model {
@@ -73,7 +71,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.GetDetailRequest:
 		// 获取内容 + 第一页的评论
 		m.viewportReady = false
-		m.canRequestReply = true
 		m.id = msgType.ID
 		m.replyPage = 1
 		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
@@ -81,10 +78,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.getDetail(msgType.ID),
 			m.getReply(msgType.ID),
 		)
-	case messages.GetDetailResult:
-		m.detail = msgType.Detail
+	case messages.GetDetailResponse:
+		m.detail = msgType.Data
 		m.initViewport()
-	case messages.GetRepliesResult:
+	case messages.GetReplyResponse:
 		cmds = append(cmds, m.onReplyResult(msgType))
 		m.initViewport()
 	case tea.WindowSizeMsg:
@@ -128,38 +125,33 @@ func (m Model) headerView() string {
 
 func (m Model) getDetail(id int64) tea.Cmd {
 	return tea.Sequence(
-		messages.Post(messages.LoadingRequestDetail.Start), api.Client.GetDetail(id),
-		messages.Post(messages.LoadingRequestDetail.End),
+		messages.LoadingRequestDetail.PostStart(),
+		api.V2ex.GetDetail(context.Background(), id),
+		messages.LoadingRequestDetail.PostEnd(),
 	)
 }
 
-func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
+func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 
-	m.requestingReply = false
-	if msgType.Error != nil {
-		return messages.Post(msgType.Error)
-	}
-
+	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
-	m.replyPage++
-	m.replies = append(m.replies, msgType.Replies...)
+	m.replyPage = data.Pagination.CurrPage + 1
 
+	m.replies = append(m.replies, msgType.Data.Result...)
 	var cmds []tea.Cmd
-
-	if msgType.Pagination.Total > 0 && config.G.ShowPage() {
-		help := lo.If(config.G.ShowHelp(), keyHelp).Else("")
+	if data.Pagination.TotalCount > 0 {
 		cmds = append(
 			cmds, messages.Post(
-				messages.ShowTipsRequest{
-					Text: msgType.Pagination.ToString(help),
+				messages.ShowAlertRequest{
+					Text: data.Pagination.ToString(),
+					Help: keyHelp,
 				},
 			),
 		)
 	}
 
-	if m.replyPage > msgType.Pagination.Pages {
-		m.canRequestReply = false
-		cmds = append(cmds, messages.Post(messages.ShowTipsRequest{Text: "没有更多了"}))
+	if m.replyPage > data.Pagination.TotalPages {
+		cmds = append(cmds, messages.Post(messages.ShowAlertRequest{Text: "没有更多了"}))
 	}
 
 	return tea.Batch(cmds...)
@@ -167,17 +159,14 @@ func (m *Model) onReplyResult(msgType messages.GetRepliesResult) tea.Cmd {
 
 func (m *Model) getReply(id int64) tea.Cmd {
 
-	if m.requestingReply {
+	if messages.LoadingRequestReply.Loading() {
 		return messages.Post(errors.New("评论请求中"))
 	}
 
-	if !m.canRequestReply {
-		return nil
-	}
-	m.requestingReply = true
 	return tea.Sequence(
-		messages.Post(messages.LoadingRequestReply.Start), api.Client.GetReply(id, m.replyPage),
-		messages.Post(messages.LoadingRequestReply.End),
+		messages.LoadingRequestReply.PostStart(),
+		api.V2ex.GetReply(context.Background(), id, m.replyPage),
+		messages.LoadingRequestReply.PostEnd(),
 	)
 }
 

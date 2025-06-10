@@ -5,15 +5,16 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/internal/types"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
 
-func (client *v2exClient) GetDetail(id int64) tea.Cmd {
+func (client *v2exClient) GetDetail(ctx context.Context, id int64) tea.Cmd {
 	return func() tea.Msg {
-		var res types.V2DetailResponse
+
+		var res response.V2Detail
 		rr, err := client.client.R().
-			SetContext(context.Background()).
+			SetContext(ctx).
 			SetResult(&res).
 			SetError(&res).
 			Get(fmt.Sprintf("/api/v2/topics/%d", id))
@@ -22,10 +23,10 @@ func (client *v2exClient) GetDetail(id int64) tea.Cmd {
 			return err
 		}
 
-		if !res.Success {
+		if !res.IsSuccess() {
 			return fmt.Errorf("[%s]%s", rr.Status(), res.Message)
 		}
 
-		return messages.GetDetailResult{Detail: res.Result}
+		return messages.GetDetailResponse{Data: res.Result}
 	}
 }

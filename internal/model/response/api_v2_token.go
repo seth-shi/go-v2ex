@@ -1,11 +1,11 @@
-package types
+package response
 
-type V2TokenResponse struct {
+type V2Token struct {
 	V2ApiError
-	Result *V2TokenResult `json:"result"`
+	Result *v2TokenResult `json:"result"`
 }
 
-type V2TokenResult struct {
+type v2TokenResult struct {
 	Token       string `json:"token"`
 	Scope       string `json:"scope"`
 	Expiration  int64  `json:"expiration"`

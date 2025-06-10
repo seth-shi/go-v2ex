@@ -14,7 +14,7 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 )
 
@@ -23,13 +23,13 @@ var (
 )
 
 type Model struct {
-	// 只在 update view 读写, 无需上锁
-	// 会自动删除
+	// 只在 update view 读写, 无需上锁, 会自动删除
 	loadings map[int]string
 	errors   []string
 	tips     []string
 	// 固定文案, 不会修改 (例如用来显示页码)
 	leftText string
+	helpText string
 	spinner  spinner.Model
 }
 
@@ -57,20 +57,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.EndLoading:
 		delete(m.loadings, msgType.ID)
 		return m, nil
-	case messages.ShowTipsRequest:
+	case messages.ShowAlertRequest:
 		m.leftText = msgType.Text
+		m.helpText = msgType.Help
 		return m, nil
 	// 消息处理
-	case messages.ShowAutoTipsRequest:
-		return m, m.addAutoClearTips(msgType.Text)
-	case messages.ShiftAutoTipsRequest:
-		// 删除第一个元素
+	case messages.ShowToastRequest:
+		m.tips = append(m.tips, msgType.Text)
+		return m, tea.Tick(
+			time.Second*3, func(time.Time) tea.Msg {
+				return messages.ShiftToastRequest{}
+			},
+		)
+	case error:
+		if msgType == nil {
+			return m, nil
+		}
+		m.errors = append(m.errors, msgType.Error())
+		return m, tea.Tick(
+			time.Second*3, func(time.Time) tea.Msg {
+				return messages.ShiftErrorRequest{}
+			},
+		)
+	// 有定时器触发这个删除
+	case messages.ShiftToastRequest:
 		m.tips = lo.Slice(m.tips, 1, len(m.tips))
 		return m, nil
-	case error:
-		return m, m.addError(msgType)
+	// 有定时器触发这个删除
 	case messages.ShiftErrorRequest:
-		// 删除第一个元素
 		m.errors = lo.Slice(m.errors, 1, len(m.errors))
 		return m, nil
 	case spinner.TickMsg:
@@ -85,100 +99,88 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		leftSection []string
+		showFooter  = config.G.ShowFooter()
+		showHelp    = config.G.ShowHelp()
+		showLimit   = config.G.ShowLimit()
+		screenWidth = config.Screen.Width
+		padding     = config.Screen.Padding
+		footer      strings.Builder
 	)
 
-	if len(m.errors) > 0 || len(m.loadings) > 0 || len(m.tips) > 0 || m.leftText != "" {
-
-		if m.leftText != "" {
-			leftSection = append(leftSection, styles.Hint.Render(m.leftText))
-		}
-
-		leftSection = append(
-			leftSection, styles.Err.Render(strings.Join(m.errors, " / ")),
-		)
-
-		leftSection = append(
-			leftSection, styles.Hint.Render(strings.Join(m.tips, " / ")),
-		)
-
-		loadingKeys := lo.Keys(m.loadings)
-		slices.Sort(loadingKeys)
-		loadingText := lo.Map(
-			loadingKeys, func(key int, index int) string {
-				return fmt.Sprintf(
-					"%s %s",
-					lipgloss.NewStyle().PaddingLeft(1).Render(
-						m.spinner.View(),
-					),
-					m.loadings[key],
-				)
-			},
-		)
-		leftSection = append(leftSection, styles.Hint.Render(strings.Join(loadingText, "")))
-	} else if config.G.ShowFooter() {
-		helpKey := consts.AppKeyMap.HelpPage.Help()
-		leftSection = append(leftSection, styles.Hint.Render(fmt.Sprintf(" %s %s", helpKey.Key, helpKey.Desc)))
+	// 外部传入的 text 优先级最高显示
+	// 然后显示错误消息(n 秒后自动删除)
+	// 然后显示提示消息(n 秒后自动删除)
+	// 显示 loading 消息(需要调用方手动删除)
+	if m.leftText != "" && showFooter {
+		footer.WriteString(styles.Hint.Render(m.leftText))
+	}
+	// 错误 && 加载 && 提示不管用户显示不显示页脚都不影响
+	if len(m.errors) > 0 {
+		footer.WriteString(" ")
+		footer.WriteString(styles.Err.Render(strings.Join(m.errors, " ")))
+	}
+	if len(m.tips) > 0 {
+		footer.WriteString(" ")
+		footer.WriteString(styles.Hint.Render(strings.Join(m.tips, " ")))
 	}
 
-	padding := 1
-	leftContent := strings.Join(leftSection, " ")
-	footer := leftContent
-	if config.G.ShowFooter() {
+	if len(m.loadings) > 0 {
+		footer.WriteString(" ")
+		footer.WriteString(m.getLoadingText())
+	}
 
-		var canHiddenFooter strings.Builder
-		canHiddenFooter.WriteString(
+	if m.helpText != "" && showHelp {
+		footer.WriteString(" ")
+		footer.WriteString(styles.Hint.Render(m.helpText))
+	}
+
+	if showFooter {
+		currentContent := footer.String()
+		paddingLeft := screenWidth - lipgloss.Width(currentContent) - 2*padding
+		footer.Reset()
+		footer.WriteString(
 			lipgloss.JoinHorizontal(
 				lipgloss.Top,
-				leftContent,
+				currentContent,
 				lipgloss.PlaceHorizontal(
-					config.Screen.Width-lipgloss.Width(leftContent)-2*padding,
+					paddingLeft,
 					lipgloss.Right,
 					styles.Hint.Render(rightText),
 				),
 			),
 		)
 
-		if config.G.ShowLimit() && api.LimitTotalCount.Load() > 0 {
-
-			screenWidth := config.Screen.GetContentWidth()
-			rate := float64(screenWidth) * float64(api.LimitRemainCount.Load()) / float64(api.LimitTotalCount.Load())
-			borderWidth := int(math.Round(rate))
-			canHiddenFooter.WriteString("\n")
-			canHiddenFooter.WriteString(strings.Repeat("♡", borderWidth))
-			canHiddenFooter.WriteString(strings.Repeat("_", screenWidth-borderWidth))
+		if showLimit {
+			rate := api.V2ex.GetLimitRate()
+			borderWidth := int(math.Round(float64(screenWidth) * rate))
+			footer.WriteString("\n")
+			footer.WriteString(strings.Repeat("♡", max(0, borderWidth)))
+			footer.WriteString(strings.Repeat("_", max(0, screenWidth-borderWidth)))
 		}
-		footer = canHiddenFooter.String()
 	}
 
 	return styles.
 		Hint.
-		Width(config.Screen.Width).
-		Render(footer)
+		Width(screenWidth).
+		Render(footer.String())
 }
 
-func (m *Model) addAutoClearTips(text string) tea.Cmd {
+func (m Model) getLoadingText() string {
+	// loadings 是一个 map
+	var (
+		loadingKeys = lo.Keys(m.loadings)
+		loadingIcon = m.spinner.View()
+		loadingText strings.Builder
+	)
+	slices.Sort(loadingKeys)
 
-	m.tips = append(m.tips, text)
-	// 3s 后删除一个
-	return tea.Tick(
-		time.Second*3, func(time.Time) tea.Msg {
-			return messages.ShiftAutoTipsRequest{}
+	lo.ForEach(
+		loadingKeys, func(key int, index int) {
+			loadingText.WriteString(" ")
+			loadingText.WriteString(loadingIcon)
+			loadingText.WriteString(" ")
+			loadingText.WriteString(m.loadings[key])
 		},
 	)
-}
-
-func (m *Model) addError(err error) tea.Cmd {
-
-	if err == nil {
-		return nil
-	}
-
-	m.errors = append(m.errors, err.Error())
-	// 3s 后删除一个
-	return tea.Tick(
-		time.Second*3, func(time.Time) tea.Msg {
-			return messages.ShiftErrorRequest{}
-		},
-	)
+	return styles.Hint.Render(loadingText.String())
 }

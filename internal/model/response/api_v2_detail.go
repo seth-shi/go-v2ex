@@ -1,13 +1,14 @@
-package types
+package response
 
 import (
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
-type V2DetailResponse struct {
+type V2Detail struct {
 	V2ApiError
 	Result V2DetailResult `json:"result"`
 }
+
 type V2DetailResult struct {
 	Id              int    `json:"id"`
 	Title           string `json:"title"`

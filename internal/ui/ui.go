@@ -1,18 +1,18 @@
 package ui
 
 import (
+	"context"
 	"reflect"
 	"strings"
-
-	"github.com/seth-shi/go-v2ex/internal/config"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/components/footer"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/routes"
 )
 
@@ -51,10 +51,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.RedirectPageRequest:
 		// 切换页面
 		m.contentModel = msgType.ContentModel
-		return m, tea.Sequence(messages.Post(messages.ShowTipsRequest{Text: ""}))
-	case messages.GetTopicsResult:
+		return m, tea.Sequence(messages.Post(messages.ShowAlertRequest{Text: ""}))
+	case messages.GetTopicResponse:
 		// 缓存这个列表, 进到详情页回来还有数据, 并且消息传递给子级
-		routes.TopicsModel.SetTopics(msgType.Topics)
+		routes.TopicsModel.SetTopics(msgType)
 	case messages.RedirectDetailRequest:
 		return m, tea.Sequence(
 			messages.Post(messages.RedirectPageRequest{ContentModel: routes.DetailModel}),
@@ -81,8 +81,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			config.G.SwitchShowMode()
 			return m, tea.Batch(
 				config.SaveToFile(""),
-				messages.Post(messages.ShowTipsRequest{Text: ""}),
-				messages.Post(messages.ShowAutoTipsRequest{Text: config.G.GetShowModeText()}),
+				messages.Post(messages.ShowToastRequest{Text: config.G.GetShowModeText()}),
 			)
 		case key.Matches(msgType, consts.AppKeyMap.Quit):
 			return m, tea.Quit
@@ -115,12 +114,14 @@ func (m Model) View() string {
 	)
 
 	output.WriteString(m.contentModel.View())
-
 	// 底部增加一个 padding, 来固定在底部
 	if !config.Session.BossComingMode {
-		output.WriteRune('\n')
 		ff := m.footerModel.View()
-		paddingTop := config.Screen.Height - lipgloss.Height(output.String()) - lipgloss.Height(ff)
+		// 打印调试信息
+		paddingTop := config.Screen.Height -
+			lipgloss.Height(output.String()) -
+			lipgloss.Height(ff)
+		output.WriteString("\n")
 		output.WriteString(lipgloss.NewStyle().PaddingTop(paddingTop).Render(ff))
 	}
 
@@ -130,7 +131,7 @@ func (m Model) View() string {
 func (m Model) initHomePage(err error) tea.Cmd {
 
 	// 把配置注入到其他页面
-	api.Client.RefreshConfig()
+	api.V2ex.RefreshConfig()
 	routes.SettingModel.RefreshConfig()
 
 	var cmds = []tea.Cmd{
@@ -143,7 +144,7 @@ func (m Model) initHomePage(err error) tea.Cmd {
 		cmds = append(
 			cmds,
 			messages.Post(messages.RedirectPageRequest{ContentModel: routes.SettingModel}),
-			messages.Post(messages.ShowAutoTipsRequest{Text: "请先按照说明配置秘钥和节点"}),
+			messages.Post(messages.ShowToastRequest{Text: "请先按照说明配置秘钥和节点"}),
 		)
 		return tea.Sequence(cmds...)
 	}
@@ -158,8 +159,9 @@ func (m Model) initHomePage(err error) tea.Cmd {
 		),
 		// 获取个人信息
 		tea.Sequence(
-			messages.Post(messages.LoadingGetToken.Start), api.Client.GetToken,
-			messages.Post(messages.LoadingGetToken.End),
+			messages.LoadingGetToken.PostStart(),
+			api.V2ex.GetToken(context.Background()),
+			messages.LoadingGetToken.PostEnd(),
 		),
 	)
 	return tea.Sequence(cmds...)

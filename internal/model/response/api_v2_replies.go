@@ -1,14 +1,15 @@
-package types
+package response
 
 import (
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
-type V2ReplyResponse struct {
+type V2Reply struct {
 	V2ApiError
 	Result     []V2ReplyResult `json:"result"`
-	Pagination Pagination      `json:"pagination"`
+	Pagination Page            `json:"pagination"`
 }
+
 type V2ReplyResult struct {
 	Id              int    `json:"id"`
 	Content         string `json:"content"`

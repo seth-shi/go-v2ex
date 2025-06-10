@@ -1,4 +1,4 @@
-package types
+package response
 
 type V1TopicResult struct {
 	Id              int64  `json:"id"`

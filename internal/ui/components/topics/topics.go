@@ -1,19 +1,20 @@
 package topics
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
 
-	"github.com/samber/lo"
-
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/model/response"
 
 	"github.com/seth-shi/go-v2ex/internal/api"
-	"github.com/seth-shi/go-v2ex/internal/types"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,7 +22,7 @@ import (
 	"github.com/dromara/carbon/v2"
 )
 
-const keyHelp = "[a/d:翻页 w/s:选择 e:详情 tab/shift+tab:节点 空格:老板键 `:设置页 ?:帮助页]"
+const keyHelp = "[a/d:翻页 w/s:选择 e:详情 tab/shift+tab:节点 空格:老板键 `:设置页 ?:帮助页 -:显示页脚]"
 
 var (
 	cellStyle         = lipgloss.NewStyle().Padding(0, 1).Width(5)
@@ -33,16 +34,15 @@ var (
 )
 
 type Model struct {
-	requesting bool
-	topics     []types.TopicComResult
+	topics []response.TopicResult
 }
 
 func New() Model {
 	return Model{}
 }
 
-func (m *Model) SetTopics(topics []types.TopicComResult) {
-	m.topics = topics
+func (m *Model) SetTopics(msg messages.GetTopicResponse) {
+	m.topics = msg.Data.Items
 }
 
 func (m Model) Init() tea.Cmd {
@@ -54,18 +54,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgType := msg.(type) {
 	// 其它地方负责回调这里去请求数据,
 	case messages.GetTopicsRequest:
-		m.requesting = true
 		// 默认进来是要给节点
 		return m, tea.Sequence(
-			messages.Post(messages.LoadingRequestTopics.Start),
-			api.Client.GetTopics(config.G.ActiveTab, msgType.Page),
-			messages.Post(messages.LoadingRequestTopics.End),
+			messages.LoadingRequestTopics.PostStart(),
+			api.V2ex.GetTopics(context.Background(), config.G.ActiveTab, msgType.Page),
+			messages.LoadingRequestTopics.PostEnd(),
 		)
-	case messages.GetTopicsResult:
+	case messages.GetTopicResponse:
 		return m, m.onTopicResult(msgType)
 	case tea.KeyMsg:
 		// 如果在请求中, 不处理键盘事件
-		if m.requesting {
+		if messages.LoadingRequestTopics.Loading() {
 			return m, messages.Post(errors.New("请求中"))
 		}
 
@@ -95,12 +94,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msgType, consts.AppKeyMap.Left):
 			if config.Session.TopicPage > 1 {
-				m.requesting = true
 				return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage - 1})
 			}
 			return m, nil
 		case key.Matches(msgType, consts.AppKeyMap.Right):
-			m.requesting = true
 			return m, messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage + 1})
 		default:
 			return m, nil
@@ -142,21 +139,17 @@ func (m *Model) moveTabs(add int) tea.Cmd {
 	)
 }
 
-func (m *Model) onTopicResult(msgType messages.GetTopicsResult) tea.Cmd {
-	m.requesting = false
-	if msgType.Error != nil {
-		return messages.Post(msgType.Error)
-	}
-	m.topics = msgType.Topics
-	config.Session.TopicPage = msgType.Pagination.CurrPage
+func (m *Model) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
+	m.topics = msgType.Data.Items
+	config.Session.TopicPage = msgType.Data.Pagination.CurrPage
 	// 显示错误和页码
-	if config.G.ShowPage() {
-		help := lo.If(config.G.ShowHelp(), keyHelp).Else("")
-		pageInfo := msgType.Pagination.ToString(help)
-		return messages.Post(messages.ShowTipsRequest{Text: pageInfo})
-	}
-
-	return nil
+	pageInfo := msgType.Data.Pagination.ToString()
+	return messages.Post(
+		messages.ShowAlertRequest{
+			Text: pageInfo,
+			Help: keyHelp,
+		},
+	)
 }
 
 func (m *Model) renderTabs() string {
@@ -190,7 +183,6 @@ func (m *Model) renderTabs() string {
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
-	doc.WriteString("\n")
 	return doc.String()
 }
 
@@ -214,11 +206,11 @@ func (m *Model) renderTables() string {
 
 		// 设置列自适应宽度
 		nodeTitle := lo.ValueOr(config.NodeMap, topic.Node, topic.Node)
-		if len(nodeTitle) > columnWidth[1] {
+		if len(columnWidth) > 1 && len(nodeTitle) > columnWidth[1] {
 			// lipgloss.Width 处理中文, len 处理空格
 			columnWidth[1] = max(lipgloss.Width(nodeTitle), len(nodeTitle))
 		}
-		if len(topic.Member) > columnWidth[3] {
+		if len(columnWidth) > 3 && len(topic.Member) > columnWidth[3] {
 			columnWidth[3] = max(lipgloss.Width(topic.Member), len(topic.Member))
 		}
 
@@ -236,6 +228,13 @@ func (m *Model) renderTables() string {
 
 	// len(tableStyles) + 1 = 列数 (再 +1 等于边框数)
 	titleWidth := config.Screen.Width - (len(columnWidth) + 1 + 1) - lo.Sum(columnWidth)
+	for i, lines := range rows {
+		if len(lines) > 2 {
+			title := lines[2]
+			rows[i][2] = ansi.TruncateWc(title, titleWidth, "...")
+		}
+	}
+
 	t := table.New().
 		Border(lipgloss.RoundedBorder()).
 		BorderStyle(lipgloss.NewStyle()).

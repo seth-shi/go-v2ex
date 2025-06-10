@@ -6,7 +6,7 @@ import (
 
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/config"
-	"github.com/seth-shi/go-v2ex/internal/ui/messages"
+	"github.com/seth-shi/go-v2ex/internal/model/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -164,7 +164,7 @@ func (m Model) saveSettings() tea.Cmd {
 		config.G.Nodes = strings.TrimSpace(m.inputs[1].Value())
 	}
 
-	api.Client.RefreshConfig()
+	api.V2ex.RefreshConfig()
 	return config.SaveToFile("配置保存成功")
 }
 
