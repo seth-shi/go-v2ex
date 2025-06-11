@@ -1,7 +1,6 @@
 package response
 
 type V2Topic struct {
-	V2ApiError
 	Result     []V2TopicResult `json:"result"`
 	Pagination Page            `json:"pagination"`
 }

@@ -1,7 +1,6 @@
 package response
 
 type V2Token struct {
-	V2ApiError
 	Result *v2TokenResult `json:"result"`
 }
 

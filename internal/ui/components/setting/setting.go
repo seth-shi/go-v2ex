@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
@@ -69,7 +69,7 @@ func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m Model) RefreshConfig() {
+func (m *Model) refreshConfig() {
 	// 当前不在 body 页, 无法通过消息更新
 	if len(m.inputs) > 0 {
 		m.inputs[0].SetValue(config.G.Token)
@@ -82,6 +82,8 @@ func (m Model) RefreshConfig() {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgType := msg.(type) {
+	case messages.RefreshSettingInputRequest:
+		m.refreshConfig()
 	case tea.KeyMsg:
 		switch msgType.String() {
 		case "tab", "shift+tab", "enter", "up", "down":
@@ -156,15 +158,9 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 }
 
 func (m Model) saveSettings() tea.Cmd {
-	if len(m.inputs) > 0 {
-		config.G.Token = strings.TrimSpace(m.inputs[0].Value())
-	}
 
-	if len(m.inputs) > 1 {
-		config.G.Nodes = strings.TrimSpace(m.inputs[1].Value())
-	}
-
-	api.V2ex.RefreshConfig()
+	config.G.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
+	config.G.Nodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
 	return config.SaveToFile("配置保存成功")
 }
 

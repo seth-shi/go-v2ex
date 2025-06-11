@@ -5,7 +5,6 @@ import (
 )
 
 type V2Detail struct {
-	V2ApiError
 	Result V2DetailResult `json:"result"`
 }
 

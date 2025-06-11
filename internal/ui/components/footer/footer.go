@@ -151,6 +151,7 @@ func (m Model) View() string {
 		)
 
 		if showLimit {
+
 			rate := api.V2ex.GetLimitRate()
 			borderWidth := int(math.Round(float64(screenWidth) * rate))
 			footer.WriteString("\n")

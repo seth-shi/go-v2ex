@@ -2,10 +2,8 @@ package api
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/alphadose/haxmap"
-	"github.com/go-resty/resty/v2"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
@@ -22,37 +20,29 @@ var (
 	v1CacheTopics = haxmap.New[string, response.Topic](3)
 )
 
-func (client *v2exClient) getV1Topics(
+func (cli *v2exClient) getV1Topics(
 	ctx context.Context,
 	nodeName string,
 	page int,
 ) (*response.Topic, error) {
 
 	var (
-		v1Error response.V1ApiError
-		v1Res   []response.V1TopicResult
-		rr      *resty.Response
-		err     error
-		uri     = lo.If(nodeName == hotNode, hotUri).Else(latestUri)
+		v1Res []response.V1TopicResult
+		uri   = lo.If(nodeName == hotNode, hotUri).Else(latestUri)
 	)
 
 	// v1 接口没有分页, 所以我们从缓存中伪造出来
 	res, exists := v1CacheTopics.Get(uri)
 	if !exists {
 		// 请求接口
-		rr, err = client.
+		_, err := cli.
 			client.
 			R().
 			SetContext(ctx).
 			SetResult(&v1Res).
-			SetError(&v1Error).
 			Get(uri)
 		if err != nil {
-			return nil, errorWrapper("主题", err)
-		}
-
-		if !v1Error.IsSuccess() {
-			return nil, errorWrapper("主题", fmt.Errorf("[%s]%s", rr.Status(), v1Error.Message))
+			return nil, err
 		}
 
 		topics := lo.Map(
@@ -79,7 +69,7 @@ func (client *v2exClient) getV1Topics(
 	res.Pagination.ResetPerPageTo10()
 	res.Items = lo.Subset(res.Items, (page-1)*perPage, perPage)
 	if len(res.Items) == 0 {
-		return nil, errorWrapper("主题", response.ErrNoMoreData)
+		return nil, ErrNoMoreData
 	}
 
 	return &res, nil

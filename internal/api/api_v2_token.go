@@ -9,21 +9,16 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
 
-func (client *v2exClient) GetToken(ctx context.Context) tea.Cmd {
+func (cli *v2exClient) GetToken(ctx context.Context) tea.Cmd {
 	return func() tea.Msg {
 		var res response.V2Token
-		rr, err := client.client.R().
+		_, err := cli.client.R().
 			SetContext(ctx).
 			SetResult(&res).
-			SetError(&res).
 			Get("/api/v2/token")
 
 		if err != nil {
 			return errorWrapper("令牌", err)
-		}
-
-		if !res.IsSuccess() {
-			return errorWrapper("令牌", fmt.Errorf("[%s]%s", rr.Status(), res.Message))
 		}
 
 		// 准备过期的话, 发送提醒

@@ -74,7 +74,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			config.Session.BossComingMode = !config.Session.BossComingMode
 			return m, m.returnPage(routes.BossComingModel)
 		case key.Matches(msgType, consts.AppKeyMap.SettingPage):
-			return m, m.returnPage(routes.SettingModel)
+			return m, tea.Sequence(
+				m.returnPage(routes.SettingModel),
+				messages.Post(messages.RefreshSettingInputRequest{}),
+			)
 		case key.Matches(msgType, consts.AppKeyMap.HelpPage):
 			return m, m.returnPage(routes.HelpModel)
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
@@ -104,6 +107,7 @@ func (m Model) returnPage(contentModel tea.Model) tea.Cmd {
 	if reflect.DeepEqual(m.contentModel, contentModel) {
 		return m.initHomePage(nil)
 	}
+
 	return messages.Post(messages.RedirectPageRequest{ContentModel: contentModel})
 }
 
@@ -131,9 +135,6 @@ func (m Model) View() string {
 func (m Model) initHomePage(err error) tea.Cmd {
 
 	// 把配置注入到其他页面
-	api.V2ex.RefreshConfig()
-	routes.SettingModel.RefreshConfig()
-
 	var cmds = []tea.Cmd{
 		// 读取配置文件有错误, 不影响后续流程, 可以让用户自己抉择
 		messages.Post(err),

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
@@ -23,14 +22,12 @@ var (
 	v2CacheLocker    sync.Mutex
 )
 
-func (client *v2exClient) getV2Topics(ctx context.Context, nodeName string, page int) (*response.Topic, error) {
+func (cli *v2exClient) getV2Topics(ctx context.Context, nodeName string, page int) (*response.Topic, error) {
 
 	// 使用 V2 的接口
 	var (
 		v2Res response.V2Topic
 		res   response.Topic
-		rr    *resty.Response
-		err   error
 		// 从缓存中获取 key
 		cacheKey = fmt.Sprintf("%s_%d", nodeName, page)
 		// 第一页返回: 0~0, 否则返回: 10~20
@@ -52,19 +49,14 @@ func (client *v2exClient) getV2Topics(ctx context.Context, nodeName string, page
 			apiRequestPage = (page + 1) / 2
 			requestUri     = fmt.Sprintf(v2TopicsUri, nodeName, apiRequestPage)
 		)
-		rr, err = client.
+		_, err := cli.
 			client.
 			R().
 			SetContext(ctx).
 			SetResult(&v2Res).
-			SetError(&v2Res).
 			Get(requestUri)
 		if err != nil {
-			return nil, errorWrapper("主题", err)
-		}
-
-		if !v2Res.IsSuccess() {
-			return nil, errorWrapper("主题", fmt.Errorf("[%s]%s", rr.Status(), v2Res.Message))
+			return nil, err
 		}
 
 		// 预先缓存一页, 由于接口返回 20 个一页, 这边使用切换调整成 10 个一页

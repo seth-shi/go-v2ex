@@ -89,7 +89,7 @@ var AppKeyMap = KeyMap{
 		key.WithHelp("e/enter", "[主题页]查看主题详情"),
 	),
 	SwitchShowMode: key.NewBinding(
-		key.WithKeys("-"),
-		key.WithHelp("-", "[减号]切换底部显示隐藏"),
+		key.WithKeys("="),
+		key.WithHelp("=", "[减号]切换底部显示隐藏"),
 	),
 }

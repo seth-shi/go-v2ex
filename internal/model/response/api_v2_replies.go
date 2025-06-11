@@ -5,7 +5,6 @@ import (
 )
 
 type V2Reply struct {
-	V2ApiError
 	Result     []V2ReplyResult `json:"result"`
 	Pagination Page            `json:"pagination"`
 }

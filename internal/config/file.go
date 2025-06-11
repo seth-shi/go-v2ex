@@ -27,10 +27,10 @@ type fileConfig struct {
 	ShowMode  int    `json:"show_mode" default:"4"`
 }
 
-func newFileConfig() fileConfig {
+func newFileConfig() *fileConfig {
 	var cfg fileConfig
 	defaults.SetDefaults(&cfg)
-	return cfg
+	return &cfg
 }
 
 func (c *fileConfig) SwitchShowMode() {

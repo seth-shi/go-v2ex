@@ -10,7 +10,7 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/model/response"
 )
 
-func (client *v2exClient) GetTopics(
+func (cli *v2exClient) GetTopics(
 	ctx context.Context,
 	nodeIndex int,
 	page int,
@@ -31,13 +31,13 @@ func (client *v2exClient) GetTopics(
 		// 请求的时候, 用数据的分页数据
 		switch nodeName {
 		case latestNode, hotNode:
-			res, err = client.getV1Topics(ctx, nodeName, page)
+			res, err = cli.getV1Topics(ctx, nodeName, page)
 		default:
-			res, err = client.getV2Topics(ctx, nodeName, page)
+			res, err = cli.getV2Topics(ctx, nodeName, page)
 		}
 
 		if err != nil {
-			return err
+			return errorWrapper("主题", err)
 		}
 
 		return messages.GetTopicResponse{Data: res}
