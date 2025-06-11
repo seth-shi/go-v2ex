@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +34,6 @@ func beforeRequest(client *resty.Client, request *resty.Request) error {
 	}
 
 	request.SetAuthToken(config.G.Token)
-	log.Println(config.G.Token)
 
 	return nil
 }
