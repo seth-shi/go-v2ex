@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"strings"
 
@@ -128,6 +129,7 @@ func (m Model) View() string {
 		output.WriteString("\n")
 		output.WriteString(lipgloss.NewStyle().PaddingTop(paddingTop).Render(ff))
 	}
+	log.Println(output.String())
 
 	return output.String()
 }
