@@ -39,25 +39,32 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+// AppKeyMap
+// vim key bind style : https://github.com/philc/vimium#keyboard-bindings
+// ?       show the help dialog for a list of all available keys
+// h       scroll left
+// j       scroll down
+// k       scroll up
+// l       scroll right
 var AppKeyMap = KeyMap{
 	Up: key.NewBinding(
-		key.WithKeys("w", "up"),
+		key.WithKeys("w", "up", "k"),
 		key.WithHelp("w/↑", "[主题页]移动到上一个"),
 	),
 	Down: key.NewBinding(
-		key.WithKeys("s", "down"),
+		key.WithKeys("s", "down", "j"),
 		key.WithHelp("s/↓", "[主题页]列表移动到下一个"),
 	),
 	Left: key.NewBinding(
-		key.WithKeys("a", "left"),
+		key.WithKeys("a", "left", "h"),
 		key.WithHelp("a/←", "[主题页]上一页"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("d", "right"),
+		key.WithKeys("d", "right", "l"),
 		key.WithHelp("d/→", "[主题页]下一页"),
 	),
 	Back: key.NewBinding(
-		key.WithKeys("q"),
+		key.WithKeys("q", "H"),
 		key.WithHelp("q", "返回上一页"),
 	),
 	HelpPage: key.NewBinding(
@@ -85,7 +92,7 @@ var AppKeyMap = KeyMap{
 		key.WithHelp("esc", "退出程序"),
 	),
 	Enter: key.NewBinding(
-		key.WithKeys("e", "enter"),
+		key.WithKeys("e", "enter", "o"),
 		key.WithHelp("e/enter", "[主题页]查看主题详情"),
 	),
 	SwitchShowMode: key.NewBinding(
