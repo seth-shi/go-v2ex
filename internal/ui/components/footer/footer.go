@@ -18,27 +18,25 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 )
 
-var (
-	rightText = fmt.Sprintf("%s@%s Powered by seth-shi", consts.AppName, consts.AppVersion)
-)
-
 type Model struct {
 	// 只在 update view 读写, 无需上锁, 会自动删除
 	loadings map[int]string
 	errors   []string
 	tips     []string
 	// 固定文案, 不会修改 (例如用来显示页码)
-	leftText string
-	helpText string
-	spinner  spinner.Model
+	leftText   string
+	helpText   string
+	spinner    spinner.Model
+	appVersion string
 }
 
-func New() Model {
+func New(appVersion string) Model {
 
 	return Model{
 		// 最大加载数限定
-		loadings: make(map[int]string, 10),
-		spinner:  spinner.New(spinner.WithSpinner(spinner.Points)),
+		loadings:   make(map[int]string, 10),
+		spinner:    spinner.New(spinner.WithSpinner(spinner.Points)),
+		appVersion: appVersion,
 	}
 }
 
@@ -145,7 +143,7 @@ func (m Model) View() string {
 				lipgloss.PlaceHorizontal(
 					paddingLeft,
 					lipgloss.Right,
-					styles.Hint.Render(rightText),
+					styles.Hint.Render(fmt.Sprintf("%s@%s Powered by seth-shi", consts.AppName, m.appVersion)),
 				),
 			),
 		)

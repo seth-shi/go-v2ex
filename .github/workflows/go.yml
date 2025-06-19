@@ -16,6 +16,10 @@ jobs:
             goos: windows
     steps:
       - uses: actions/checkout@v4
+      - name: Set APP_VERSION env
+        run: echo APP_VERSION=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev ) >> ${GITHUB_ENV}
+      - name: Environment Printer
+        uses: managedkaos/print-env@v1.0
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -25,3 +29,4 @@ jobs:
           md5sum: false
           overwrite: true
           asset_name: go-v2ex-${{ matrix.goos }}-${{ matrix.goarch }}
+          ldflags: -X "main.appVersion=${{ env.APP_VERSION }}"
