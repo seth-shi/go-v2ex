@@ -20,12 +20,14 @@ import (
 type Model struct {
 	contentModel tea.Model
 	footerModel  tea.Model
+	appVersion   string
 }
 
-func NewModel() Model {
+func NewModel(appVersion string) Model {
 	return Model{
 		contentModel: routes.SplashModel,
-		footerModel:  footer.New(),
+		footerModel:  footer.New(appVersion),
+		appVersion:   appVersion,
 	}
 }
 

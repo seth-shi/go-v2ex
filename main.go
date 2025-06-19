@@ -11,6 +11,11 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui"
 )
 
+// these information will be collected when build, by `-ldflags "-X main.appVersion=0.1"`
+var (
+	appVersion = "0.0.0"
+)
+
 func init() {
 	carbon.SetLayout(carbon.DateTimeLayout)
 	carbon.SetTimezone(carbon.PRC)
@@ -24,5 +29,5 @@ func main() {
 		log.SetOutput(pkg.DiscardLogger().Writer())
 	}
 
-	lo.Must1(tea.NewProgram(ui.NewModel(), tea.WithMouseCellMotion()).Run())
+	lo.Must1(tea.NewProgram(ui.NewModel(appVersion), tea.WithMouseCellMotion()).Run())
 }
