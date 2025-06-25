@@ -18,6 +18,7 @@ type KeyMap struct {
 	ShiftTab       key.Binding
 	Enter          key.Binding
 	SwitchShowMode key.Binding
+	LoadImage      key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
@@ -34,8 +35,8 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back}, // first column
-		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},      // second column
+		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back, k.LoadImage}, // first column
+		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},                   // second column
 	}
 }
 
@@ -98,5 +99,9 @@ var AppKeyMap = KeyMap{
 	SwitchShowMode: key.NewBinding(
 		key.WithKeys("="),
 		key.WithHelp("=", "[减号]切换底部显示隐藏"),
+	),
+	LoadImage: key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "加载图片"),
 	),
 }

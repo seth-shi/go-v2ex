@@ -12,6 +12,7 @@ var (
 	LoadingRequestTopics = newLoadingKey("获取主题中")
 	LoadingRequestDetail = newLoadingKey("获取内容中")
 	LoadingRequestReply  = newLoadingKey("获取评论中")
+	LoadingRequestImage  = newLoadingKey("获取图片中")
 )
 
 func newLoadingKey(text string) loadingManager {

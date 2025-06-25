@@ -28,7 +28,7 @@ func newClient() *v2exClient {
 		New().
 		SetBaseURL(baseUrl).
 		SetTimeout(time.Second * 10).
-		SetLogger(pkg.DiscardLogger()).
+		SetLogger(pkg.RestyLogger()).
 		AddRequestMiddleware(beforeRequest).
 		AddResponseMiddleware(apiErrorHandler).
 		AddResponseMiddleware(rateLimitHandler)

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -21,13 +21,15 @@ type Model struct {
 	contentModel tea.Model
 	footerModel  tea.Model
 	appVersion   string
+	errConfig    error
 }
 
-func NewModel(appVersion string) Model {
+func NewModel(appVersion string, errConfig error) Model {
 	return Model{
 		contentModel: routes.SplashModel,
 		footerModel:  footer.New(appVersion),
 		appVersion:   appVersion,
+		errConfig:    errConfig,
 	}
 }
 
@@ -35,7 +37,10 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
 		// 加载配置
-		config.LoadFileConfig,
+		func() tea.Msg {
+			slog.Info("配置加载完成", slog.Any("err", m.errConfig))
+			return messages.LoadConfigResult{Error: m.errConfig}
+		},
 		// 其它不要用 init 初始化, 使用消息去刷新
 		m.contentModel.Init(),
 		m.footerModel.Init(),
@@ -131,7 +136,6 @@ func (m Model) View() string {
 		output.WriteString("\n")
 		output.WriteString(lipgloss.NewStyle().PaddingTop(paddingTop).Render(ff))
 	}
-	log.Println(output.String())
 
 	return output.String()
 }

@@ -15,3 +15,11 @@ type GetDetailResponse struct {
 type GetReplyResponse struct {
 	Data response.V2Reply
 }
+
+type GetImageRequest struct {
+	URL []string
+}
+
+type GetImageResult struct {
+	Result map[string]string
+}

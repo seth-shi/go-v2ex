@@ -1,6 +1,9 @@
 package response
 
 import (
+	"strings"
+
+	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
@@ -24,13 +27,24 @@ type V2ReplyResult struct {
 		Avatar   string `json:"avatar"`
 		Created  int64  `json:"created"`
 	} `json:"member"`
+
+	renderContent string
 }
 
-func (r V2ReplyResult) GetContent() string {
-	var content = r.ContentRendered
-	if r.ContentRendered == "" {
-		content = r.Content
+func (r *V2ReplyResult) GetContent() string {
+
+	if r.renderContent == "" {
+		var content = r.Content
+		// 如果是链接出现多次, 那么只保留一次
+		list := pkg.ExtractImgURLsNoUnique(content)
+		for k, v := range lo.CountValues(list) {
+			if v > 1 {
+				content = strings.Replace(content, k, "", v-1)
+			}
+		}
+
+		r.renderContent = pkg.SafeRenderHtml(content)
 	}
 
-	return pkg.SafeRenderHtml(content)
+	return r.renderContent
 }

@@ -25,6 +25,7 @@ type fileConfig struct {
 	Timeout   uint   `json:"timeout" default:"5"`
 	ActiveTab int    `json:"active_tab"`
 	ShowMode  int    `json:"show_mode" default:"4"`
+	Debug     bool   `json:"debug"`
 }
 
 func newFileConfig() *fileConfig {
@@ -69,16 +70,16 @@ func (c *fileConfig) GetNodes() []string {
 	return strings.Split(c.Nodes, ",")
 }
 
-func LoadFileConfig() tea.Msg {
+func LoadFileConfig() error {
 
 	bf, err := os.ReadFile(SavePath())
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return messages.LoadConfigResult{Error: nil}
+			return nil
 		}
 	}
 
-	return messages.LoadConfigResult{Error: json.Unmarshal(bf, &G)}
+	return json.Unmarshal(bf, &G)
 }
 
 func SaveToFile(title string) tea.Cmd {

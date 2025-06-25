@@ -8,12 +8,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/seth-shi/go-v2ex/internal/consts"
-	"github.com/seth-shi/go-v2ex/internal/model/response"
-
 	"github.com/dromara/carbon/v2"
 	"github.com/muesli/reflow/wrap"
+	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/model/response"
+	"github.com/seth-shi/go-v2ex/internal/pkg"
+	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,7 +25,7 @@ import (
 )
 
 const (
-	keyHelp = "[q:返回 e:加载评论 w/s/鼠标:滑动 a/d:翻页 =:显示页脚]"
+	keyHelp = "[q:返回 e:加载评论 r:加载图片 w/s/鼠标:滑动 a/d:翻页 =:显示页脚]"
 )
 
 var (
@@ -49,6 +51,8 @@ type Model struct {
 	detail        response.V2DetailResult
 	replies       []response.V2ReplyResult
 	canLoadReply  bool
+
+	imageDataMap map[string]string
 
 	id        int64
 	replyPage int
@@ -82,12 +86,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 	case messages.GetDetailResponse:
 		m.detail = msgType.Data
-		m.initViewport()
+		cmds = append(cmds, m.initViewport())
 	case messages.GetReplyResponse:
 		cmds = append(cmds, m.onReplyResult(msgType))
-		m.initViewport()
+		cmds = append(cmds, m.initViewport())
 	case tea.WindowSizeMsg:
-		m.initViewport()
+		cmds = append(cmds, m.initViewport())
+		// 图片加载成功
+	case messages.GetImageRequest:
+		if messages.LoadingRequestImage.Loading() {
+			return m, messages.Post(errors.New("请求图片中"))
+		}
+		return m, tea.Sequence(
+			messages.LoadingRequestImage.PostStart(),
+			m.requestImages(msgType.URL),
+			messages.LoadingRequestImage.PostEnd(),
+		)
+	case messages.GetImageResult:
+		cmds = append(cmds, m.onImageLoaded(msgType))
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.Enter):
@@ -103,6 +119,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg = tea.KeyMsg{Type: tea.KeyPgUp}
 		case key.Matches(msgType, consts.AppKeyMap.Right):
 			msg = tea.KeyMsg{Type: tea.KeyPgDown}
+		case key.Matches(msgType, consts.AppKeyMap.LoadImage):
+			return m, messages.Post(
+				messages.GetImageRequest{URL: pkg.ExtractImgURLs(m.buildContent())},
+			)
 		}
 	}
 
@@ -112,6 +132,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+
+	if !m.viewportReady {
+		return styles.Hint.
+			Width(config.Screen.Width).
+			PaddingTop(2).
+			Bold(true).
+			Height(1).
+			Align(lipgloss.Center).
+			Render("载入中...")
+	}
+
 	return fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View())
 }
 
@@ -175,41 +206,70 @@ func (m *Model) getReply(id int64) tea.Cmd {
 	)
 }
 
-func (m *Model) initViewport() {
+func (m *Model) requestImages(urls []string) tea.Cmd {
+
+	return func() tea.Msg {
+
+		if len(urls) == 0 {
+			return errors.New("当前页面无图片")
+		}
+
+		width := (config.Screen.Width * 9) / 10
+		return messages.GetImageResult{
+			Result: pkg.ProcessURLs(urls, width),
+		}
+	}
+}
+func (m *Model) onImageLoaded(result messages.GetImageResult) tea.Cmd {
+	m.imageDataMap = lo.Assign(m.imageDataMap, result.Result)
+	return m.initViewport()
+}
+
+func (m *Model) initViewport() tea.Cmd {
+
+	m.viewport.SetContent(m.buildContent())
+	m.viewportReady = true
+	return nil
+}
+
+func (m *Model) buildContent() string {
+
 	// 获取详情
 	var (
 		contentWidth = config.Screen.Width - 2
 		content      strings.Builder
+		topicContent = m.detail.GetContent()
 	)
-	// 组装文案
-	// 找到所有图片去动态替换成字符串
-	content.WriteString(
-		sectionStyle.
-			Width(config.Screen.Width).
-			Render(
-				fmt.Sprintf(
-					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
-					m.detail.Node.Title, m.detail.Url,
-					m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
-					m.detail.Replies,
-					lipgloss.NewStyle().
-						Bold(true).
-						Border(lipgloss.RoundedBorder(), false, false, true, false).
-						Render(m.detail.Title),
-					wrap.String(m.detail.GetContent(), contentWidth),
+
+	if m.detail.Id > 0 {
+		content.WriteString(
+			sectionStyle.
+				Width(config.Screen.Width).
+				Render(
+					fmt.Sprintf(
+						"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
+						m.detail.Node.Title, m.detail.Url,
+						m.detail.Member.Username, carbon.CreateFromTimestamp(m.detail.Created),
+						m.detail.Replies,
+						lipgloss.NewStyle().
+							Bold(true).
+							Border(lipgloss.RoundedBorder(), false, false, true, false).
+							Render(m.detail.Title),
+						wrap.String(topicContent, contentWidth),
+					),
 				),
-			),
-	)
-	content.WriteString("\n\n")
-
-	// 附言
-	for i, c := range m.detail.Supplements {
-
-		desc := fmt.Sprintf(
-			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
-			c.GetContent(),
 		)
-		content.WriteString(sectionStyle.Width(config.Screen.Width).Render(desc))
+		content.WriteString("\n\n")
+
+		// 附言
+		for i, c := range m.detail.Supplements {
+
+			desc := fmt.Sprintf(
+				"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
+				c.GetContent(),
+			)
+			content.WriteString(sectionStyle.Width(config.Screen.Width).Render(desc))
+		}
 	}
 
 	// 开始渲染评论
@@ -231,6 +291,17 @@ func (m *Model) initViewport() {
 		content.WriteString(sectionStyle.Width(config.Screen.Width).Render(replies.String()))
 	}
 
-	m.viewport.SetContent(content.String())
-	m.viewportReady = true
+	// 这里处理图片替换
+	if len(m.imageDataMap) > 0 {
+
+		var items []string
+		for k, v := range m.imageDataMap {
+			items = append(items, k, fmt.Sprintf("预览图片: %s\n%s\n", k, v))
+		}
+		replacer := strings.NewReplacer(items...)
+
+		return replacer.Replace(content.String())
+	}
+
+	return content.String()
 }
