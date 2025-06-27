@@ -1,8 +1,12 @@
 package response
 
-type V2Topic struct {
+import (
+	"strings"
+)
+
+type V2TopicResponse struct {
 	Result     []V2TopicResult `json:"result"`
-	Pagination Page            `json:"pagination"`
+	Pagination PageResponse    `json:"pagination"`
 }
 
 type V2TopicResult struct {
@@ -17,4 +21,8 @@ type V2TopicResult struct {
 	Created         int    `json:"created"`
 	LastModified    int64  `json:"last_modified"`
 	LastTouched     int64  `json:"last_touched"`
+}
+
+func (t V2TopicResult) GetTitle() string {
+	return strings.ReplaceAll(strings.ReplaceAll(t.Title, "\n", ""), "\r", "")
 }

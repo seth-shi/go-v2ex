@@ -12,6 +12,7 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
+	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
@@ -122,10 +123,7 @@ func (m *Model) moveTabs(add int) tea.Cmd {
 	config.Session.TopicPage = 1
 	config.G.ActiveTab += add
 
-	nodesSize := len(config.G.GetNodes())
-	if nodesSize == 0 {
-		return nil
-	}
+	nodesSize := len(config.OfficialNodes)
 
 	if config.G.ActiveTab >= nodesSize {
 		config.G.ActiveTab = 0
@@ -157,14 +155,17 @@ func (m *Model) renderTabs() string {
 	var (
 		doc          strings.Builder
 		renderedTabs []string
-		tabs         = config.G.GetNodes()
+		tabs         = config.OfficialNodes
+		activeTab    *config.GroupNode
 	)
 
-	for i, t := range tabs {
+	for i, _ := range tabs {
+		t := config.GetGroupNode(i)
 		var style lipgloss.Style
 		isFirst, isLast, isActive := i == 0, i == len(tabs)-1, i == config.G.ActiveTab
 		if isActive {
 			style = activeTabStyle
+			activeTab = &t
 		} else {
 			style = inactiveTabStyle
 		}
@@ -179,11 +180,22 @@ func (m *Model) renderTabs() string {
 			border.BottomRight = "┤"
 		}
 		style = style.Border(border)
-		renderedTabs = append(renderedTabs, style.Render(lo.ValueOr(config.NodeMap, t, t)))
+		renderedTabs = append(renderedTabs, style.Render(t.Name))
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
+	// 增加一行显示二级
+	if activeTab != nil {
+		doc.WriteString("\n")
+		nodes := lo.Map(
+			activeTab.Nodes, func(key string, index int) string {
+				return lo.ValueOr(config.NodeMap, key, key)
+			},
+		)
+		doc.WriteString(styles.Hint.PaddingLeft(1).Render(strings.Join(nodes, " · ")))
+	}
+
 	return doc.String()
 }
 

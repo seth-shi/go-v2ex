@@ -4,33 +4,46 @@ import (
 	"fmt"
 
 	"github.com/seth-shi/go-v2ex/internal/consts"
+	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
-type Page struct {
-	// 总记录数
+type PageResponse struct {
 	TotalCount int `json:"total"`
-	// 总页数
 	TotalPages int `json:"pages"`
-	// 当前页
-	CurrPage int `json:"currPage"`
 }
 
-func (p *Page) ToString() string {
+func (p *PageResponse) ToString(currPage int) string {
 	return fmt.Sprintf(
 		"╭─ %d/%d • %d条",
-		p.CurrPage,
+		currPage,
 		p.TotalPages,
 		p.TotalCount,
 	)
 }
 
-func (p *Page) ResetPerPageTo10() *Page {
+type PerTenPageInfo struct {
+	// 总记录数
+	TotalCount int `json:"total"`
+	// 当前页
+	CurrPage int `json:"currPage"`
+}
 
-	if p.TotalCount <= 0 {
-		p.TotalPages = 0
-		return p
+func NewPerTenPageInfo(total, page int) *PerTenPageInfo {
+	return &PerTenPageInfo{
+		TotalCount: total,
+		CurrPage:   page,
 	}
+}
 
-	p.TotalPages = (p.TotalCount + consts.PerPage - 1) / consts.PerPage
-	return p
+func (p *PerTenPageInfo) ToString() string {
+	return fmt.Sprintf(
+		"╭─ %d/%d • %d条",
+		p.CurrPage,
+		p.TotalPage(),
+		p.TotalCount,
+	)
+}
+
+func (p *PerTenPageInfo) TotalPage() int {
+	return pkg.TotalPages(p.TotalCount, consts.PerPage)
 }

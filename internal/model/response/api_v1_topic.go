@@ -1,5 +1,9 @@
 package response
 
+import (
+	"strings"
+)
+
 type V1TopicResult struct {
 	Id              int64  `json:"id"`
 	Title           string `json:"title"`
@@ -29,4 +33,8 @@ type V1TopicResult struct {
 	Created      int64 `json:"created"`
 	LastModified int64 `json:"last_modified"`
 	LastTouched  int64 `json:"last_touched"`
+}
+
+func (t V1TopicResult) GetTitle() string {
+	return strings.ReplaceAll(strings.ReplaceAll(t.Title, "\n", ""), "\r", "")
 }

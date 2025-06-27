@@ -4,23 +4,6 @@ import (
 	"sync"
 )
 
-type LockableValue[T any] struct {
-	locker sync.RWMutex
-	data   T
-}
-
-func (l *LockableValue[T]) Get() T {
-	l.locker.RLock()
-	defer l.locker.RUnlock()
-	return l.data
-}
-
-func (l *LockableValue[T]) Set(val T) {
-	l.locker.Lock()
-	defer l.locker.Unlock()
-	l.data = val
-}
-
 type LockableMap[T any] struct {
 	locker sync.RWMutex
 	data   map[string]T

@@ -169,13 +169,13 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replies = append(m.replies, msgType.Data.Result...)
-	m.replyPage = data.Pagination.CurrPage
+	m.replyPage = msgType.CurrPage
 	var cmds []tea.Cmd
 	if data.Pagination.TotalCount > 0 {
 		cmds = append(
 			cmds, messages.Post(
 				messages.ShowAlertRequest{
-					Text: data.Pagination.ToString(),
+					Text: data.Pagination.ToString(m.replyPage),
 					Help: keyHelp,
 				},
 			),

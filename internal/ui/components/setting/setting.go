@@ -56,7 +56,7 @@ func New() Model {
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
 		case 1:
-			t.Prompt = "列表节点:"
+			t.Prompt = "我的节点:"
 		}
 
 		m.inputs[i] = t
@@ -76,7 +76,7 @@ func (m *Model) refreshConfig() {
 	}
 
 	if len(m.inputs) > 1 {
-		m.inputs[1].SetValue(config.G.Nodes)
+		m.inputs[1].SetValue(config.G.MyNodes)
 	}
 }
 
@@ -160,7 +160,7 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 func (m Model) saveSettings() tea.Cmd {
 
 	config.G.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
-	config.G.Nodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
+	config.G.MyNodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
 	return config.SaveToFile("配置保存成功")
 }
 
@@ -184,7 +184,7 @@ func (m Model) View() string {
 	if len(m.inputs) > 1 {
 		text := fmt.Sprintf(
 			"\n%s\n%s",
-			"所有分类此处查看: https://v2ex.com/planes (多个分类使用英文逗号隔开, URL 上的 https://v2ex.com/go/{name})",
+			"所有节点此处查看: https://v2ex.com/planes (多个节点使用英文逗号隔开, URL 上的 https://v2ex.com/go/{name})",
 			m.inputs[1].View(),
 		)
 		b.WriteString(tipStyle.Render(text))

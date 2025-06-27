@@ -7,9 +7,9 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
-type V2Reply struct {
+type V2ReplyResponse struct {
 	Result     []V2ReplyResult `json:"result"`
-	Pagination Page            `json:"pagination"`
+	Pagination PageResponse    `json:"pagination"`
 }
 
 type V2ReplyResult struct {

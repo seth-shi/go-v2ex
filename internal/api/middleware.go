@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +30,10 @@ var (
 
 func beforeRequest(client *resty.Client, request *resty.Request) error {
 
+	slog.Info(
+		"api request",
+		slog.String("url", request.URL),
+	)
 	if config.G.Timeout > 0 {
 		request.SetTimeout(time.Second * time.Duration(config.G.Timeout))
 	}

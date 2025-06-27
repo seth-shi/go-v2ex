@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mcuadros/go-defaults"
@@ -21,7 +20,7 @@ var (
 type fileConfig struct {
 	// NOTE: 增加默认秘钥, 方便用户快速使用, 用户以后还是要自己配置
 	Token     string `json:"personal_access_token" default:"35bbd155-df12-4778-9916-5dd59d967fef"`
-	Nodes     string `json:"nodes" default:"latest,hot,qna,all4all,programmer,jobs,share,apple,create,macos,career,pointless"`
+	MyNodes   string `json:"my_nodes" default:"share,create,qna,jobs,programmer,career,invest,ideas,hardware"`
 	Timeout   uint   `json:"timeout" default:"5"`
 	ActiveTab int    `json:"active_tab"`
 	ShowMode  int    `json:"show_mode" default:"4"`
@@ -64,10 +63,6 @@ func (c *fileConfig) ShowHelp() bool {
 func (c *fileConfig) ShowLimit() bool {
 	return c.ShowMode == consts.ShowModeLeftAndRightWithLimit ||
 		c.ShowMode == consts.ShowModeAll
-}
-
-func (c *fileConfig) GetNodes() []string {
-	return strings.Split(c.Nodes, ",")
 }
 
 func LoadFileConfig() error {

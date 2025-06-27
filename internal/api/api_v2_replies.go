@@ -12,7 +12,7 @@ import (
 func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.Cmd {
 	return func() tea.Msg {
 
-		var res response.V2Reply
+		var res response.V2ReplyResponse
 		_, err := cli.client.R().
 			SetContext(ctx).
 			SetResult(&res).
@@ -22,7 +22,9 @@ func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.Cmd
 			return errorWrapper("回复", err)
 		}
 
-		res.Pagination.CurrPage = page
-		return messages.GetReplyResponse{Data: res}
+		return messages.GetReplyResponse{
+			Data:     res,
+			CurrPage: page,
+		}
 	}
 }

@@ -7,7 +7,6 @@ import (
 )
 
 var (
-	ErrNoMoreData      = errors.New("无更多数据")
 	ErrUnauthorized    = errors.New("未配置令牌")
 	ErrRequestTimeout  = errors.New("请求超时,请确保已配置代理")
 	ErrRequestCanceled = errors.New("请求取消")

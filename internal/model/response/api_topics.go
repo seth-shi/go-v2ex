@@ -1,8 +1,8 @@
 package response
 
-type Topic struct {
+type GroupTopic struct {
 	Items      []TopicResult
-	Pagination Page
+	Pagination *PerTenPageInfo
 }
 
 type TopicResult struct {

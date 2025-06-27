@@ -9,5 +9,5 @@ type GetTopicsRequest struct {
 }
 
 type GetTopicResponse struct {
-	Data *response.Topic
+	Data *response.GroupTopic
 }

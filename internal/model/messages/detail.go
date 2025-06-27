@@ -13,7 +13,8 @@ type GetDetailResponse struct {
 }
 
 type GetReplyResponse struct {
-	Data response.V2Reply
+	Data     response.V2ReplyResponse
+	CurrPage int
 }
 
 type GetImageRequest struct {
