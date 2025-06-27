@@ -12,7 +12,7 @@ type V2Detail struct {
 }
 
 type V2DetailResult struct {
-	Id              int    `json:"id"`
+	Id              int64  `json:"id"`
 	Title           string `json:"title"`
 	Content         string `json:"content"`
 	ContentRendered string `json:"content_rendered"`
