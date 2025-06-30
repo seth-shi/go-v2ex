@@ -41,9 +41,6 @@ var (
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b)
 	}()
-	sectionStyle = lipgloss.
-		NewStyle().
-		Border(lipgloss.RoundedBorder())
 )
 
 type Model struct {
@@ -143,7 +140,7 @@ func (m Model) View() string {
 
 func (m Model) headerView() string {
 	var p = 0.0
-	if m.content.Len() == 0 {
+	if m.content.Len() > 0 {
 		p = m.viewport.ScrollPercent() * 100
 	}
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", p))
@@ -182,7 +179,19 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 
 	var (
 		replies strings.Builder
+		// 第一页评论展示顶部
+		// 最后一页展示底部边框
+		boxStyle = styles.
+				Style.
+				BorderTop(msgType.CurrPage == 1).
+				BorderBottom(msgType.CurrPage == data.Pagination.TotalPages)
+		replyTitleStyle = styles.
+				Border.
+				Width(config.Screen.GetContentWidth()).
+				BorderRight(false).
+				BorderBottom(false)
 	)
+
 	for _, r := range data.Result {
 		m.replyIndex++
 		floor := fmt.Sprintf(
@@ -191,26 +200,42 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 			carbon.CreateFromTimestamp(r.Created),
 			r.Member.Username,
 		)
-		replies.WriteString(lipgloss.NewStyle().Bold(true).Render(floor))
+
+		replies.WriteString(replyTitleStyle.Render(floor))
 		replies.WriteString("\n")
 		replies.WriteString(r.GetContent())
 		replies.WriteString("\n\n")
 	}
 
 	// 这里处理图片替换
-	m.content.WriteString(sectionStyle.Width(config.Screen.Width).Render(replies.String()))
+	m.content.WriteString(boxStyle.Width(config.Screen.Width).Render(replies.String()))
 	m.refreshViewContent()
 	return nil
 }
 
 func (m *Model) refreshViewContent() {
 
+	var (
+		imageStyle = styles.
+			Border.
+			BorderLeft(true).
+			BorderRight(false).
+			BorderTop(false).
+			BorderBottom(false).
+			PaddingLeft(1)
+	)
+
 	if len(m.imageDataMap) > 0 {
 		var items []string
 		var index int
 		for k, v := range m.imageDataMap {
 			index++
-			items = append(items, k, fmt.Sprintf("图片#%d\n%s\n", index, v))
+
+			var imageData strings.Builder
+			imageData.WriteString(fmt.Sprintf("图片#%d", index))
+			imageData.WriteString("\n")
+			imageData.WriteString(v)
+			items = append(items, k, fmt.Sprintf("\n%s", imageStyle.Render(imageData.String())))
 		}
 		replacer := strings.NewReplacer(items...)
 		m.viewport.SetContent(replacer.Replace(m.content.String()))
@@ -259,18 +284,20 @@ func (m *Model) onImageLoaded(result messages.GetImageResult) tea.Cmd {
 func (m *Model) renderDetail(detail response.V2DetailResult) tea.Cmd {
 
 	var (
-		contentWidth = config.Screen.Width - 2
-		content      strings.Builder
-		topicContent = detail.GetContent()
+		contentWidth      = config.Screen.Width - 2
+		content           strings.Builder
+		topicContent      = detail.GetContent()
+		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
 	)
 
 	content.WriteString(
-		sectionStyle.
+		contentTitleStyle.
 			Width(config.Screen.Width).
 			Render(
 				fmt.Sprintf(
 					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
-					detail.Node.Title, detail.Url,
+					styles.Bold.Render(detail.Node.Title),
+					detail.Url,
 					detail.Member.Username, carbon.CreateFromTimestamp(detail.Created),
 					detail.Replies,
 					lipgloss.NewStyle().
@@ -290,7 +317,7 @@ func (m *Model) renderDetail(detail response.V2DetailResult) tea.Cmd {
 			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
 			c.GetContent(),
 		)
-		content.WriteString(sectionStyle.Width(config.Screen.Width).Render(desc))
+		content.WriteString(contentTitleStyle.Width(config.Screen.Width).Render(desc))
 	}
 
 	// 构建内容

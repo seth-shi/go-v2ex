@@ -7,3 +7,7 @@ import (
 var (
 	Bold = lipgloss.NewStyle().Bold(true)
 )
+
+var (
+	Style = lipgloss.NewStyle()
+)
