@@ -1,7 +1,7 @@
 package response
 
 type V2Token struct {
-	Result *v2TokenResult `json:"result"`
+	Result v2TokenResult `json:"result"`
 }
 
 type v2TokenResult struct {

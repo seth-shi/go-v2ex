@@ -95,6 +95,7 @@ func (api *TopicGroupApi) prepareRequest(node config.GroupNode, page int) error 
 	if node.Key != api.cacheNode {
 		api.cacheData = nil
 		api.cacheNode = node.Key
+		api.nodeRequestPageState.Clear()
 	}
 
 	return nil
@@ -167,7 +168,6 @@ func (api *TopicGroupApi) groupRequestData(groupNode config.GroupNode) (
 	}
 
 	// 等待所有任务完成
-	slog.Info("请求主题完成")
 	if err := <-chError; err != nil {
 		return nil, nil, err
 	}

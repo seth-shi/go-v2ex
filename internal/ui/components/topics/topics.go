@@ -133,7 +133,7 @@ func (m *Model) moveTabs(add int) tea.Cmd {
 	}
 
 	return tea.Batch(
-		config.SaveToFile(""),
+		messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功"),
 		messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
 	)
 }

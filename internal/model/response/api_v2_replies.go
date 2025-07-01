@@ -13,20 +13,10 @@ type V2ReplyResponse struct {
 }
 
 type V2ReplyResult struct {
-	Id              int    `json:"id"`
-	Content         string `json:"content"`
-	ContentRendered string `json:"content_rendered"`
-	Created         int64  `json:"created"`
-	Member          struct {
-		Id       int    `json:"id"`
-		Username string `json:"username"`
-		Bio      string `json:"bio"`
-		Website  string `json:"website"`
-		Github   string `json:"github"`
-		Url      string `json:"url"`
-		Avatar   string `json:"avatar"`
-		Created  int64  `json:"created"`
-	} `json:"member"`
+	Id      int          `json:"id"`
+	Content string       `json:"content"`
+	Created int64        `json:"created"`
+	Member  MemberResult `json:"member"`
 
 	renderContent string
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 
@@ -161,15 +162,13 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replyPage = msgType.CurrPage
-	var cmds []tea.Cmd
+	var cmds tea.Cmd
 	if data.Pagination.TotalCount > 0 {
-		cmds = append(
-			cmds, messages.Post(
-				messages.ShowAlertRequest{
-					Text: data.Pagination.ToString(m.replyPage),
-					Help: keyHelp,
-				},
-			),
+		cmds = messages.Post(
+			messages.ShowAlertRequest{
+				Text: data.Pagination.ToString(m.replyPage),
+				Help: keyHelp,
+			},
 		)
 	}
 
@@ -192,6 +191,7 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 				BorderBottom(false)
 	)
 
+	replies.WriteString("\n")
 	for _, r := range data.Result {
 		m.replyIndex++
 		floor := fmt.Sprintf(
@@ -204,13 +204,13 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 		replies.WriteString(replyTitleStyle.Render(floor))
 		replies.WriteString("\n")
 		replies.WriteString(r.GetContent())
-		replies.WriteString("\n\n")
+		replies.WriteString("\n")
 	}
 
 	// 这里处理图片替换
 	m.content.WriteString(boxStyle.Width(config.Screen.Width).Render(replies.String()))
 	m.refreshViewContent()
-	return nil
+	return cmds
 }
 
 func (m *Model) refreshViewContent() {
@@ -269,13 +269,20 @@ func (m *Model) requestImages(urls []string) tea.Cmd {
 			return errors.New("当前页面无图片")
 		}
 
+		// 只去下载图片里没有的
+		keys := lo.Keys(m.imageDataMap)
+		diffUrl := lo.Without(urls, keys...)
+
+		slog.Info("下载图片", slog.Int("count", len(diffUrl)))
+
 		width := (config.Screen.Width * 9) / 10
 		return messages.GetImageResult{
-			Result: pkg.ProcessURLs(urls, width),
+			Result: pkg.ProcessURLs(diffUrl, width),
 		}
 	}
 }
 func (m *Model) onImageLoaded(result messages.GetImageResult) tea.Cmd {
+	slog.Info("图片下载成功", slog.Int("count", len(result.Result)), slog.Any("urls", result))
 	m.imageDataMap = lo.Assign(m.imageDataMap, result.Result)
 	m.refreshViewContent()
 	return nil

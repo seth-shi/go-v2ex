@@ -91,7 +91,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msgType, consts.AppKeyMap.SwitchShowMode):
 			config.G.SwitchShowMode()
 			return m, tea.Batch(
-				config.SaveToFile(""),
+				messages.ErrorOrToast(config.SaveToFile, ""),
 				messages.Post(messages.ShowToastRequest{Text: config.G.GetShowModeText()}),
 			)
 		case key.Matches(msgType, consts.AppKeyMap.Quit):

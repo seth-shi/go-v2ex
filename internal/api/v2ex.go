@@ -1,9 +1,8 @@
 package api
 
 import (
-	"time"
-
 	"github.com/seth-shi/go-v2ex/internal/api/api_topics"
+	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 	"resty.dev/v3"
 )
@@ -13,7 +12,7 @@ const (
 )
 
 var (
-	V2ex = newClient()
+	V2ex = &v2exClient{}
 )
 
 type v2exClient struct {
@@ -21,21 +20,22 @@ type v2exClient struct {
 	topicApi *api_topics.TopicGroupApi
 }
 
-func newClient() *v2exClient {
+func SetUpHttpClient(conf *config.FileConfig) {
 
 	// 初始化 http 客户端
-	restyClient := resty.
-		New().
+	client := pkg.NewHTTPClient(conf).
 		SetBaseURL(baseUrl).
-		SetTimeout(time.Second * 10).
-		SetLogger(pkg.RestyLogger()).
 		AddRequestMiddleware(beforeRequest).
 		AddResponseMiddleware(apiErrorHandler).
 		AddResponseMiddleware(rateLimitHandler)
 
-	return &v2exClient{
-		topicApi: api_topics.New(restyClient),
-		client:   restyClient,
+	if conf.IsMockEnv() {
+		client.SetTransport(&pkg.MockRoundTripper{Mock: mockApiResp})
+	}
+
+	V2ex = &v2exClient{
+		topicApi: api_topics.New(client),
+		client:   client,
 	}
 }
 

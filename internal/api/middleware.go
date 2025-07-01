@@ -3,12 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
@@ -29,17 +27,8 @@ var (
 )
 
 func beforeRequest(client *resty.Client, request *resty.Request) error {
-
-	slog.Info(
-		"api request",
-		slog.String("url", request.URL),
-	)
-	if config.G.Timeout > 0 {
-		request.SetTimeout(time.Second * time.Duration(config.G.Timeout))
-	}
-
+	// 修改后及时生效
 	request.SetAuthToken(config.G.Token)
-
 	return nil
 }
 

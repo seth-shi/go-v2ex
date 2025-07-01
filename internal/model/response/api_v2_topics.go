@@ -10,17 +10,14 @@ type V2TopicResponse struct {
 }
 
 type V2TopicResult struct {
-	Id              int64  `json:"id"`
-	Title           string `json:"title"`
-	Content         string `json:"content"`
-	ContentRendered string `json:"content_rendered"`
-	Syntax          int    `json:"syntax"`
-	Url             string `json:"url"`
-	Replies         int    `json:"replies"`
-	LastReplyBy     string `json:"last_reply_by"`
-	Created         int    `json:"created"`
-	LastModified    int64  `json:"last_modified"`
-	LastTouched     int64  `json:"last_touched"`
+	Id           int64  `json:"id"`
+	Title        string `json:"title"`
+	Content      string `json:"content"`
+	Replies      int    `json:"replies"`
+	LastReplyBy  string `json:"last_reply_by"`
+	Created      int    `json:"created"`
+	LastModified int64  `json:"last_modified"`
+	LastTouched  int64  `json:"last_touched"`
 }
 
 func (t V2TopicResult) GetTitle() string {
