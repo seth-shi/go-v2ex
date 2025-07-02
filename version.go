@@ -4,7 +4,7 @@ import (
 	"runtime/debug"
 )
 
-// these information will be collected when build, by `-ldflags "-X main.appVersion=0.1"`
+// these information will be collected when build, by `-ldflags "-X main.appVersion=0.0.1"`
 const (
 	defaultAppVersion = "0.0.0"
 )
@@ -18,6 +18,7 @@ func init() {
 }
 
 func rebuildAppVersion() {
+
 	if appVersion != defaultAppVersion {
 		return
 	}
@@ -26,5 +27,10 @@ func rebuildAppVersion() {
 	if !ok {
 		return
 	}
+
+	if info.Main.Version == "(devel)" {
+		return
+	}
+
 	appVersion = info.Main.Version
 }

@@ -18,6 +18,8 @@
 * 运行 `go-v2ex` 命令即可启动程序。
 
 ## 功能特性
+- **自动更新**：按`u`键可从`Github`自动更新最新版本
+- **支持预览图片**：支持查看图片
 - **多节点切换**：支持自定义节点列表
 - **主题浏览**：查看最新/热门主题，支持分页翻页
 - **详情查看**：查看主题完整内容及评论列表（支持加载更多评论）
@@ -28,6 +30,7 @@
 ![列表页](assets/1.gif)
 ![列表页](assets/2.png)
 ![详情页](assets/3.png)
+![自动更新](assets/upgrade.gif)
 
 
 
@@ -55,7 +58,8 @@
 ```
 
 ## TODO 
-- [ ] 终端显示图片
+- [x] 终端显示图片
+- [x] 自动更新应用
 
 ## 感谢
 * [https://github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
