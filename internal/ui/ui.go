@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"log/slog"
 	"reflect"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/commands"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
@@ -37,10 +37,9 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
 		// 加载配置
-		func() tea.Msg {
-			slog.Info("配置加载完成", slog.Any("err", m.errConfig))
-			return messages.LoadConfigResult{Error: m.errConfig}
-		},
+		commands.DispatchConfigLoaded(m.errConfig),
+		// 检查应用是否要更新
+		commands.CheckAppHasNewVersion(m.appVersion),
 		// 其它不要用 init 初始化, 使用消息去刷新
 		m.contentModel.Init(),
 		m.footerModel.Init(),

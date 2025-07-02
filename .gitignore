@@ -26,3 +26,6 @@ config.json
 *.log
 .idea/
 .vscode/
+*.zip
+*.tar
+*.exe.old

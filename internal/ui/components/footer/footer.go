@@ -7,11 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/commands"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
@@ -85,6 +87,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.ShiftErrorRequest:
 		m.errors = lo.Slice(m.errors, 1, len(m.errors))
 		return m, nil
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msgType, consts.AppKeyMap.UpgradeApp):
+			return m, commands.UpgradeApp(m.appVersion)
+		}
+	case messages.UpgradeStateMessage:
+		m.leftText = msgType.State.Text()
+		return m, tea.Tick(time.Second, commands.CheckDownloadProcessMessages(msgType.State))
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msgType)

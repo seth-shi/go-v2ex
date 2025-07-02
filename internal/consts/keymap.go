@@ -19,6 +19,7 @@ type KeyMap struct {
 	Enter          key.Binding
 	SwitchShowMode key.Binding
 	LoadImage      key.Binding
+	UpgradeApp     key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
@@ -35,8 +36,8 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back, k.LoadImage}, // first column
-		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},                   // second column
+		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.Enter, k.Back, k.LoadImage, k.UpgradeApp}, // first column
+		{k.Quit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},                                 // second column
 	}
 }
 
@@ -103,5 +104,9 @@ var AppKeyMap = KeyMap{
 	LoadImage: key.NewBinding(
 		key.WithKeys("r"),
 		key.WithHelp("r", "加载图片"),
+	),
+	UpgradeApp: key.NewBinding(
+		key.WithKeys("u"),
+		key.WithHelp("u", "更新应用(需要网络可以访问 github)"),
 	),
 }
