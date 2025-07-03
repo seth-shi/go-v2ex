@@ -106,7 +106,7 @@ var AppKeyMap = KeyMap{
 		key.WithHelp("r", "加载图片"),
 	),
 	UpgradeApp: key.NewBinding(
-		key.WithKeys("u"),
-		key.WithHelp("u", "更新应用(需要网络可以访问 github)"),
+		key.WithKeys("ctrl+u"),
+		key.WithHelp("ctrl+u", "更新应用(需要网络可以访问 github)"),
 	),
 }
