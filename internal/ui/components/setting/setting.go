@@ -161,7 +161,6 @@ func (m Model) saveSettings() tea.Cmd {
 
 	config.G.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
 	config.G.MyNodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
-
 	return messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功")
 }
 
