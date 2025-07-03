@@ -16,7 +16,7 @@ func ErrorOrToast(fn func() error, text string) tea.Cmd {
 			return nil
 		}
 
-		return Post(ShowToastRequest{Text: text})
+		return ShowToastRequest{Text: text}
 	}
 }
 

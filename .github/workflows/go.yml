@@ -28,5 +28,7 @@ jobs:
           goversion: 1.24
           md5sum: false
           overwrite: true
+          executable_compression: upx
           asset_name: go-v2ex-${{ matrix.goos }}-${{ matrix.goarch }}
-          ldflags: -X "main.appVersion=${{ env.APP_VERSION }}"
+          pre_command: export CGO_ENABLED=0
+          ldflags: -s -w -extldflags -static -X "main.appVersion=${{ env.APP_VERSION }}"
