@@ -213,7 +213,6 @@ func CheckDownloadProcessMessages(state *messages.UpgradeState) func(t time.Time
 		}
 
 		// 否则返回下载进度条, 并且下一次继续显示进度条
-		slog.Info(state.Text())
 		return messages.UpgradeStateMessage{State: state}
 	}
 }

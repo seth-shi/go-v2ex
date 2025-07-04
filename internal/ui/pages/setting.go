@@ -1,11 +1,14 @@
-package setting
+package pages
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/internal/commands"
 	"github.com/seth-shi/go-v2ex/internal/config"
+	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 
@@ -23,22 +26,21 @@ var (
 	focusedButton = focusedStyle.Render("[ 保存 ]")
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("保存"))
 
-	homeFocusedButton = focusedStyle.Render("[ 回到首页 ]")
-	homeButton        = fmt.Sprintf("[ %s ]", blurredStyle.Render("回到首页"))
-
 	tipStyle = lipgloss.NewStyle().
 			Padding(1, 1, 0, 1)
 
-	formsCount = 4
+	formsCount = 3
 )
 
-type Model struct {
+type settingPage struct {
 	focusIndex int
 	inputs     []textinput.Model
+	setting    *config.FileConfig
+	windowPage
 }
 
-func New() Model {
-	m := Model{
+func newSettingPage() settingPage {
+	m := settingPage{
 		inputs: make([]textinput.Model, 2),
 	}
 
@@ -65,29 +67,27 @@ func New() Model {
 	return m
 }
 
-func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+func (m settingPage) Init() tea.Cmd {
+	return tea.Batch(
+		textinput.Blink,
+		commands.LoadConfig(),
+	)
 }
 
-func (m *Model) refreshConfig() {
-	// 当前不在 body 页, 无法通过消息更新
-	if len(m.inputs) > 0 {
-		m.inputs[0].SetValue(config.G.Token)
-	}
+func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	if len(m.inputs) > 1 {
-		m.inputs[1].SetValue(config.G.MyNodes)
-	}
-}
+	m.windowPage = m.windowPage.Update(msg)
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msgType := msg.(type) {
-	case messages.RefreshSettingInputRequest:
-		m.refreshConfig()
+	switch msg := msg.(type) {
+	case messages.LoadConfigResult:
+		m.setting = msg.Result
+		m.inputs[0].SetValue(msg.Result.Token)
+		m.inputs[1].SetValue(msg.Result.MyNodes)
 	case tea.KeyMsg:
-		switch msgType.String() {
+
+		switch msg.String() {
 		case "tab", "shift+tab", "enter", "up", "down":
-			s := msgType.String()
+			s := msg.String()
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
@@ -95,14 +95,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				if m.focusIndex == len(m.inputs) {
 					return m, m.saveSettings()
-				}
-
-				if m.focusIndex == formsCount-1 {
-					return m, messages.Post(
-						messages.RedirectTopicsPage{
-							Page: 1,
-						},
-					)
 				}
 			}
 
@@ -145,7 +137,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
+func (m settingPage) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputs))
 
 	// Only text inputs with Focus() set will respond, so it's safe to simply
@@ -157,17 +149,38 @@ func (m Model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m Model) saveSettings() tea.Cmd {
+func (m settingPage) saveSettings() tea.Cmd {
 
-	config.G.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
-	config.G.MyNodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
-	return messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功")
+	if m.setting == nil {
+		return commands.AlertError(errors.New("无效的配置"))
+	}
+
+	m.setting.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
+	m.setting.MyNodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
+
+	return func() tea.Msg {
+
+		if err := commands.SaveToFile(m.setting); err != nil {
+			return err
+		}
+
+		return messages.AlertInfo("保存配置成功")
+	}
 }
 
-func (m Model) View() string {
+func (m settingPage) View() string {
 	var b strings.Builder
 
-	b.WriteString(styles.Err.PaddingLeft(1).Render("tab 切换表单, 回车确认(如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行)"))
+	if m.setting == nil {
+		return loadingView(m.w, m.h, "载入配置中...")
+	}
+
+	hits := fmt.Sprintf(
+		`tab 切换表单, 回车确认(如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行)%s再按一次[%s]返回上一页`,
+		"\n",
+		strings.Join(consts.AppKeyMap.SettingPage.Keys(), " "),
+	)
+	b.WriteString(styles.Err.PaddingLeft(1).Render(hits))
 	b.WriteString("\n")
 	text := fmt.Sprintf("配置文件路径: %s", config.SavePath())
 	b.WriteString(styles.Bold.PaddingLeft(1).Render(text))
@@ -196,13 +209,7 @@ func (m Model) View() string {
 		btn1 = &focusedButton
 	}
 
-	btn2 := &homeButton
-	// 最后一个 input
-	if m.focusIndex == formsCount-1 {
-		btn2 = &homeFocusedButton
-	}
-
-	b.WriteString(tipStyle.Render(fmt.Sprintf("\n%s    %s\n", *btn1, *btn2)))
+	b.WriteString(tipStyle.Render(fmt.Sprintf("\n%s\n", *btn1)))
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(config.Screen.Width - 2).

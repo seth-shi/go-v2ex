@@ -1,15 +1,10 @@
 package messages
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kevm/bubbleo/navstack"
+)
 
-type RedirectPageRequest struct {
-	ContentModel tea.Model
-}
-
-type RedirectDetailRequest struct {
-	Id int64
-}
-
-type RedirectTopicsPage struct {
-	Page int
+func Redirect(item navstack.NavigationItem) tea.Msg {
+	return navstack.PushNavigation{Item: item}
 }

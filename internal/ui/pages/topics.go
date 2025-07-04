@@ -1,4 +1,4 @@
-package topics
+package pages
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/internal/commands"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
@@ -34,23 +35,22 @@ var (
 	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
 )
 
-type Model struct {
+type topicPage struct {
+	windowPage
 	topics []response.TopicResult
 }
 
-func New() Model {
-	return Model{}
+func newTopicPage() topicPage {
+	return topicPage{}
 }
 
-func (m *Model) SetTopics(msg messages.GetTopicResponse) {
-	m.topics = msg.Data.Items
-}
-
-func (m Model) Init() tea.Cmd {
+func (m topicPage) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
+	m.windowPage = m.windowPage.Update(msg)
 
 	switch msgType := msg.(type) {
 	// 其它地方负责回调这里去请求数据,
@@ -80,7 +80,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if curr.Id == 0 {
 				return m, messages.Post(errors.New("查看无效的主题"))
 			}
-			return m, messages.Post(messages.RedirectDetailRequest{Id: curr.Id})
+			// 去详情页面
+			return m, tea.Sequence(
+				commands.Redirect(RouteDetail),
+				commands.Post(messages.GetDetailRequest{ID: curr.Id}),
+			)
 		case key.Matches(msgType, consts.AppKeyMap.Up):
 			config.Session.TopicActiveIndex--
 			if config.Session.TopicActiveIndex < 0 {
@@ -108,7 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View() string {
+func (m topicPage) View() string {
 
 	var (
 		doc strings.Builder
@@ -119,7 +123,7 @@ func (m Model) View() string {
 	return doc.String()
 }
 
-func (m *Model) moveTabs(add int) tea.Cmd {
+func (m *topicPage) moveTabs(add int) tea.Cmd {
 	config.Session.TopicPage = 1
 	config.G.ActiveTab += add
 
@@ -132,13 +136,14 @@ func (m *Model) moveTabs(add int) tea.Cmd {
 		config.G.ActiveTab = nodesSize - 1
 	}
 
-	return tea.Batch(
-		messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功"),
-		messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
-	)
+	return nil
+	// return tea.Batch(
+	// 	messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功"),
+	// 	messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
+	// )
 }
 
-func (m *Model) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
+func (m *topicPage) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
 	m.topics = msgType.Data.Items
 	config.Session.TopicPage = msgType.Data.Pagination.CurrPage
 	// 显示错误和页码
@@ -151,7 +156,7 @@ func (m *Model) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
 	)
 }
 
-func (m *Model) renderTabs() string {
+func (m *topicPage) renderTabs() string {
 	var (
 		doc          strings.Builder
 		renderedTabs []string
@@ -199,7 +204,7 @@ func (m *Model) renderTabs() string {
 	return doc.String()
 }
 
-func (m *Model) renderTables() string {
+func (m *topicPage) renderTables() string {
 	if len(m.topics) == 0 {
 		return ""
 	}
@@ -240,7 +245,7 @@ func (m *Model) renderTables() string {
 	}
 
 	// len(tableStyles) + 1 = 列数 (再 +1 等于边框数)
-	titleWidth := config.Screen.Width - (len(columnWidth) + 1 + 1) - lo.Sum(columnWidth)
+	titleWidth := m.w - (len(columnWidth) + 1 + 1) - lo.Sum(columnWidth)
 	for i, lines := range rows {
 		if len(lines) > 2 {
 			title := lines[2]

@@ -1,14 +1,10 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
-	"os"
 	"path"
 
 	"github.com/mcuadros/go-defaults"
 	"github.com/mitchellh/go-homedir"
-	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 )
 
@@ -19,7 +15,7 @@ const (
 )
 
 var (
-	G = newFileConfig()
+	G = NewFileConfig()
 )
 
 type FileConfig struct {
@@ -28,11 +24,11 @@ type FileConfig struct {
 	MyNodes   string `json:"my_nodes" default:"share,create,qna,jobs,programmer,career,invest,ideas,hardware"`
 	Timeout   uint   `json:"timeout" default:"5"`
 	ActiveTab int    `json:"active_tab"`
-	ShowMode  int    `json:"show_mode" default:"4"`
+	ShowMode  int    `json:"show_mode" default:"3"`
 	Env       string `json:"env" default:"production"`
 }
 
-func newFileConfig() *FileConfig {
+func NewFileConfig() *FileConfig {
 	var cfg FileConfig
 	defaults.SetDefaults(&cfg)
 	return &cfg
@@ -78,32 +74,6 @@ func (c *FileConfig) ShowHelp() bool {
 func (c *FileConfig) ShowLimit() bool {
 	return c.ShowMode == consts.ShowModeLeftAndRightWithLimit ||
 		c.ShowMode == consts.ShowModeAll
-}
-
-func LoadFileConfig() (FileConfig, error) {
-
-	bf, err := os.ReadFile(SavePath())
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return lo.FromPtr(G), nil
-		}
-	}
-
-	err = json.Unmarshal(bf, &G)
-	return lo.FromPtr(G), err
-}
-
-func SaveToFile() error {
-	bytesData, err := json.Marshal(G)
-	if err != nil {
-		return err
-	}
-
-	if err = os.WriteFile(SavePath(), bytesData, 0644); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func SavePath() string {

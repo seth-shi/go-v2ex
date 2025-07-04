@@ -1,4 +1,4 @@
-package detail
+package pages
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"github.com/muesli/reflow/wrap"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/api"
+	"github.com/seth-shi/go-v2ex/internal/commands"
 	"github.com/seth-shi/go-v2ex/internal/consts"
 	"github.com/seth-shi/go-v2ex/internal/model/response"
 	"github.com/seth-shi/go-v2ex/internal/pkg"
@@ -27,7 +28,7 @@ import (
 )
 
 const (
-	keyHelp = "[q:返回 e:加载评论 r:加载图片 w/s/鼠标:滑动 a/d:翻页 =:显示页脚]"
+	detailKeyHelp = "[q:返回 e:加载评论 r:加载图片 w/s/鼠标:滑动 a/d:翻页 =:显示页脚]"
 )
 
 var (
@@ -44,7 +45,8 @@ var (
 	}()
 )
 
-type Model struct {
+type detailPage struct {
+	windowPage
 	viewport     viewport.Model
 	canLoadReply bool
 
@@ -56,19 +58,21 @@ type Model struct {
 	replyIndex int
 }
 
-func New() Model {
-	return Model{}
+func newDetailPage() detailPage {
+	return detailPage{}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m detailPage) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	m.windowPage = m.windowPage.Update(msg)
 
 	switch msgType := msg.(type) {
 	case messages.GetDetailRequest:
@@ -79,7 +83,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.canLoadReply = true
 		m.content.Reset()
 		m.imageDataMap = make(map[string]string)
-		m.viewport = viewport.New(config.Screen.Width-2, config.Screen.Height-lipgloss.Height(m.headerView())-2)
+		m.viewport = viewport.New(m.w-2, m.h-lipgloss.Height(m.headerView())-2)
 		return m, m.getDetail(msgType.ID)
 	case messages.GetDetailResponse:
 		cmds = append(cmds, m.renderDetail(msgType.Data))
@@ -103,7 +107,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.getReply(m.id)
 		// 回到首页
 		case key.Matches(msgType, consts.AppKeyMap.Back):
-			return m, messages.Post(messages.RedirectTopicsPage{})
+			return m, commands.RedirectPop()
 		case key.Matches(msgType, consts.AppKeyMap.Up):
 			msg = tea.KeyMsg{Type: tea.KeyUp}
 		case key.Matches(msgType, consts.AppKeyMap.Down):
@@ -124,22 +128,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m detailPage) View() string {
 
 	if m.content.Len() == 0 {
-		return styles.Hint.
-			Width(config.Screen.Width).
-			PaddingTop(2).
-			Bold(true).
-			Height(1).
-			Align(lipgloss.Center).
-			Render("载入中...")
+		return loadingView(m.w, m.h, "正在加载内容...")
 	}
 
 	return fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View())
 }
 
-func (m Model) headerView() string {
+func (m detailPage) headerView() string {
 	var p = 0.0
 	if m.content.Len() > 0 {
 		p = m.viewport.ScrollPercent() * 100
@@ -149,7 +147,7 @@ func (m Model) headerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func (m Model) getDetail(id int64) tea.Cmd {
+func (m detailPage) getDetail(id int64) tea.Cmd {
 	return tea.Sequence(
 		messages.LoadingRequestDetail.PostStart(),
 		api.V2ex.GetDetail(context.Background(), id),
@@ -157,7 +155,7 @@ func (m Model) getDetail(id int64) tea.Cmd {
 	)
 }
 
-func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
+func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
@@ -167,7 +165,7 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 		cmds = messages.Post(
 			messages.ShowAlertRequest{
 				Text: data.Pagination.ToString(m.replyPage),
-				Help: keyHelp,
+				Help: detailKeyHelp,
 			},
 		)
 	}
@@ -213,7 +211,7 @@ func (m *Model) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	return cmds
 }
 
-func (m *Model) refreshViewContent() {
+func (m *detailPage) refreshViewContent() {
 
 	var (
 		imageStyle = styles.
@@ -244,7 +242,7 @@ func (m *Model) refreshViewContent() {
 
 	m.viewport.SetContent(m.content.String())
 }
-func (m *Model) getReply(id int64) tea.Cmd {
+func (m *detailPage) getReply(id int64) tea.Cmd {
 
 	if messages.LoadingRequestReply.Loading() {
 		return messages.Post(errors.New("评论请求中"))
@@ -261,7 +259,7 @@ func (m *Model) getReply(id int64) tea.Cmd {
 	)
 }
 
-func (m *Model) requestImages(urls []string) tea.Cmd {
+func (m *detailPage) requestImages(urls []string) tea.Cmd {
 
 	return func() tea.Msg {
 
@@ -281,17 +279,17 @@ func (m *Model) requestImages(urls []string) tea.Cmd {
 		}
 	}
 }
-func (m *Model) onImageLoaded(result messages.GetImageResult) tea.Cmd {
+func (m *detailPage) onImageLoaded(result messages.GetImageResult) tea.Cmd {
 	slog.Info("图片下载成功", slog.Int("count", len(result.Result)), slog.Any("urls", result))
 	m.imageDataMap = lo.Assign(m.imageDataMap, result.Result)
 	m.refreshViewContent()
 	return nil
 }
 
-func (m *Model) renderDetail(detail response.V2DetailResult) tea.Cmd {
+func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 
 	var (
-		contentWidth      = config.Screen.Width - 2
+		contentWidth      = m.w - 2
 		content           strings.Builder
 		topicContent      = detail.GetContent()
 		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
@@ -299,7 +297,7 @@ func (m *Model) renderDetail(detail response.V2DetailResult) tea.Cmd {
 
 	content.WriteString(
 		contentTitleStyle.
-			Width(config.Screen.Width).
+			Width(m.w).
 			Render(
 				fmt.Sprintf(
 					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
@@ -324,7 +322,7 @@ func (m *Model) renderDetail(detail response.V2DetailResult) tea.Cmd {
 			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
 			c.GetContent(),
 		)
-		content.WriteString(contentTitleStyle.Width(config.Screen.Width).Render(desc))
+		content.WriteString(contentTitleStyle.Width(m.w).Render(desc))
 	}
 
 	// 构建内容

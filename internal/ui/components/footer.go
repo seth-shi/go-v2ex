@@ -1,4 +1,4 @@
-package footer
+package components
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mistakenelf/teacup/statusbar"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/commands"
@@ -20,92 +21,120 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/ui/styles"
 )
 
-type Model struct {
+type FooterComponents struct {
 	// 只在 update view 读写, 无需上锁, 会自动删除
 	loadings map[int]string
-	errors   []string
-	tips     []string
 	// 固定文案, 不会修改 (例如用来显示页码)
 	leftText   string
 	helpText   string
 	spinner    spinner.Model
 	appVersion string
+
+	statusBar    statusbar.Model
+	hiddenFooter bool
 }
 
-func New(appVersion string) Model {
+func NewFooter(appVersion string) FooterComponents {
 
-	return Model{
+	sb := statusbar.New(
+		statusbar.ColorConfig{
+			Foreground: lipgloss.AdaptiveColor{Dark: "#ffffff", Light: "#ffffff"},
+			Background: lipgloss.AdaptiveColor{Light: "#F25D94", Dark: "#F25D94"},
+		},
+		statusbar.ColorConfig{
+			Foreground: lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#ffffff"},
+			Background: lipgloss.AdaptiveColor{Light: "#3c3836", Dark: "#3c3836"},
+		},
+		statusbar.ColorConfig{
+			Foreground: lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#ffffff"},
+			Background: lipgloss.AdaptiveColor{Light: "#A550DF", Dark: "#A550DF"},
+		},
+		statusbar.ColorConfig{
+			Foreground: lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#ffffff"},
+			Background: lipgloss.AdaptiveColor{Light: "#6124DF", Dark: "#6124DF"},
+		},
+	)
+	return FooterComponents{
 		// 最大加载数限定
 		loadings:   make(map[int]string, 10),
 		spinner:    spinner.New(spinner.WithSpinner(spinner.Points)),
+		statusBar:  sb,
 		appVersion: appVersion,
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m FooterComponents) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 	)
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 
-	switch msgType := msg.(type) {
-	case messages.StartLoading:
-		m.loadings[msgType.ID] = msgType.Text
-		return m, nil
-	case messages.EndLoading:
-		delete(m.loadings, msgType.ID)
-		return m, nil
-	case messages.ShowAlertRequest:
-		m.leftText = msgType.Text
-		m.helpText = msgType.Help
-		return m, nil
-	// 消息处理
-	case messages.ShowToastRequest:
-		m.tips = append(m.tips, msgType.Text)
-		return m, tea.Tick(
-			time.Second*3, func(time.Time) tea.Msg {
-				return messages.ShiftToastRequest{}
-			},
-		)
+	var (
+		cmds []tea.Cmd
+		cmd  tea.Cmd
+	)
+
+	m.statusBar, cmd = m.statusBar.Update(msg)
+	cmds = append(cmds)
+
+	switch msg := msg.(type) {
+	case messages.FooterStatusMessage:
+		m.hiddenFooter = msg.HiddenFooter
+	// 把错误转到到另一个消息里
 	case error:
-		if msgType == nil {
-			return m, nil
-		}
-		m.errors = append(m.errors, msgType.Error())
-		return m, tea.Tick(
-			time.Second*3, func(time.Time) tea.Msg {
-				return messages.ShiftErrorRequest{}
-			},
-		)
-	// 有定时器触发这个删除
-	case messages.ShiftToastRequest:
-		m.tips = lo.Slice(m.tips, 1, len(m.tips))
-		return m, nil
-	// 有定时器触发这个删除
-	case messages.ShiftErrorRequest:
-		m.errors = lo.Slice(m.errors, 1, len(m.errors))
-		return m, nil
+		cmds = append(cmds, commands.AlertError(msg))
+	case messages.StartLoading:
+		m.loadings[msg.ID] = msg.Text
+	case messages.EndLoading:
+		delete(m.loadings, msg.ID)
+	case messages.ShowAlertRequest:
+		m.leftText = msg.Text
+		m.helpText = msg.Help
+	// 消息处理
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msgType, consts.AppKeyMap.UpgradeApp):
-			return m, commands.UpgradeApp(m.appVersion)
+		case key.Matches(msg, consts.AppKeyMap.UpgradeApp):
+			cmds = append(cmds, commands.UpgradeApp(m.appVersion))
+		case key.Matches(msg, consts.AppKeyMap.SwitchShowMode):
+			config.G.SwitchShowMode()
+			// 保存配置
+			return m, tea.Batch(
+				// messages.ErrorOrToast(commands.SaveToFile(config.G), ""),
+				messages.Post(messages.ShowToastRequest{Text: config.G.GetShowModeText()}),
+			)
 		}
 	case messages.UpgradeStateMessage:
-		m.leftText = msgType.State.Text()
-		return m, tea.Tick(time.Second, commands.CheckDownloadProcessMessages(msgType.State))
+		m.leftText = msg.State.Text()
+		cmds = append(cmds, tea.Tick(time.Second, commands.CheckDownloadProcessMessages(msg.State)))
 	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msgType)
-		return m, cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m FooterComponents) View() string {
 
+	if m.hiddenFooter {
+		return ""
+	}
+
+	// 1. 显示分页信息
+	// 2. 显示加载动画, help 信息
+	// 3. 版本号
+	// 4 name
+	var (
+		first  = m.GetFirstColumnContent()
+		second = m.GetSecondColumnContent()
+		third  = m.GetThirdColumnContent()
+		fourth = m.GetFourthColumContent()
+	)
+	m.statusBar.SetContent(first, second, third, fourth)
+	return m.statusBar.View()
 	var (
 		showFooter  = config.G.ShowFooter()
 		showHelp    = config.G.ShowHelp()
@@ -121,20 +150,6 @@ func (m Model) View() string {
 	// 显示 loading 消息(需要调用方手动删除)
 	if m.leftText != "" && showFooter {
 		footer.WriteString(styles.Hint.Render(m.leftText))
-	}
-	// 错误 && 加载 && 提示不管用户显示不显示页脚都不影响
-	if len(m.errors) > 0 {
-		footer.WriteString(" ")
-		footer.WriteString(styles.Err.Render(strings.Join(m.errors, " ")))
-	}
-	if len(m.tips) > 0 {
-		footer.WriteString(" ")
-		footer.WriteString(styles.Hint.Render(strings.Join(m.tips, " ")))
-	}
-
-	if len(m.loadings) > 0 {
-		footer.WriteString(" ")
-		footer.WriteString(m.getLoadingText())
 	}
 
 	if m.helpText != "" && showHelp {
@@ -174,7 +189,11 @@ func (m Model) View() string {
 		Render(footer.String())
 }
 
-func (m Model) getLoadingText() string {
+func (m FooterComponents) GetFirstColumnContent() string {
+	return fmt.Sprintf("%s@%s", consts.AppName, m.appVersion)
+}
+
+func (m FooterComponents) GetSecondColumnContent() string {
 	// loadings 是一个 map
 	var (
 		loadingKeys = lo.Keys(m.loadings)
@@ -192,4 +211,12 @@ func (m Model) getLoadingText() string {
 		},
 	)
 	return styles.Hint.Render(loadingText.String())
+}
+
+func (m FooterComponents) GetThirdColumnContent() string {
+	return fmt.Sprintf("%s@%s", consts.AppName, m.appVersion)
+}
+
+func (m FooterComponents) GetFourthColumContent() string {
+	return fmt.Sprintf("Powered by %s", consts.AppOwner)
 }
