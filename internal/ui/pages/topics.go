@@ -136,11 +136,10 @@ func (m *topicPage) moveTabs(add int) tea.Cmd {
 		config.G.ActiveTab = nodesSize - 1
 	}
 
-	return nil
-	// return tea.Batch(
-	// 	messages.ErrorOrToast(config.SaveToFile, "保存配置文件成功"),
-	// 	messages.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
-	// )
+	return tea.Batch(
+		commands.SaveToFile(config.G, ""),
+		commands.Post(messages.GetTopicsRequest{Page: config.Session.TopicPage}),
+	)
 }
 
 func (m *topicPage) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
