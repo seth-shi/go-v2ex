@@ -158,14 +158,7 @@ func (m settingPage) saveSettings() tea.Cmd {
 	m.setting.Token = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 0).Value())
 	m.setting.MyNodes = strings.TrimSpace(lo.NthOrEmpty(m.inputs, 1).Value())
 
-	return func() tea.Msg {
-
-		if err := commands.SaveToFile(m.setting); err != nil {
-			return err
-		}
-
-		return messages.AlertInfo("保存配置成功")
-	}
+	return commands.SaveToFile(m.setting, "保存配置成功")
 }
 
 func (m settingPage) View() string {

@@ -25,8 +25,8 @@ type FooterComponents struct {
 	// 只在 update view 读写, 无需上锁, 会自动删除
 	loadings map[int]string
 	// 固定文案, 不会修改 (例如用来显示页码)
-	leftText   string
-	helpText   string
+	firstText  string
+	secondText string
 	spinner    spinner.Model
 	appVersion string
 
@@ -80,6 +80,8 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 	cmds = append(cmds)
 
 	switch msg := msg.(type) {
+	case messages.CheckUpgradeAppRequest:
+		cmds = append(cmds, commands.CheckAppHasNewVersion(m.appVersion))
 	case messages.FooterStatusMessage:
 		m.hiddenFooter = msg.HiddenFooter
 	// 把错误转到到另一个消息里
@@ -89,9 +91,12 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 		m.loadings[msg.ID] = msg.Text
 	case messages.EndLoading:
 		delete(m.loadings, msg.ID)
-	case messages.ShowAlertRequest:
-		m.leftText = msg.Text
-		m.helpText = msg.Help
+	case messages.ShowStatusBarTextRequest:
+		m.firstText = msg.FirstText
+		m.secondText = msg.SecondText
+	// 不直接发消息, 因为 msg需要一个延迟, 代理转发
+	case messages.ProxyShowToastRequest:
+		cmds = append(cmds, commands.AlertInfo(msg.Text))
 	// 消息处理
 	case tea.KeyMsg:
 		switch {
@@ -101,12 +106,12 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 			config.G.SwitchShowMode()
 			// 保存配置
 			return m, tea.Batch(
-				// messages.ErrorOrToast(commands.SaveToFile(config.G), ""),
-				messages.Post(messages.ShowToastRequest{Text: config.G.GetShowModeText()}),
+				commands.SaveToFile(config.G, ""),
+				commands.Post(messages.ProxyShowToastRequest{Text: config.G.GetShowModeText()}),
 			)
 		}
 	case messages.UpgradeStateMessage:
-		m.leftText = msg.State.Text()
+		m.firstText = msg.State.Text()
 		cmds = append(cmds, tea.Tick(time.Second, commands.CheckDownloadProcessMessages(msg.State)))
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -148,13 +153,13 @@ func (m FooterComponents) View() string {
 	// 然后显示错误消息(n 秒后自动删除)
 	// 然后显示提示消息(n 秒后自动删除)
 	// 显示 loading 消息(需要调用方手动删除)
-	if m.leftText != "" && showFooter {
-		footer.WriteString(styles.Hint.Render(m.leftText))
+	if m.firstText != "" && showFooter {
+		footer.WriteString(styles.Hint.Render(m.firstText))
 	}
 
-	if m.helpText != "" && showHelp {
+	if m.secondText != "" && showHelp {
 		footer.WriteString(" ")
-		footer.WriteString(styles.Hint.Render(m.helpText))
+		footer.WriteString(styles.Hint.Render(m.secondText))
 	}
 
 	if showFooter {
@@ -190,7 +195,7 @@ func (m FooterComponents) View() string {
 }
 
 func (m FooterComponents) GetFirstColumnContent() string {
-	return fmt.Sprintf("%s@%s", consts.AppName, m.appVersion)
+	return m.firstText
 }
 
 func (m FooterComponents) GetSecondColumnContent() string {
@@ -210,7 +215,7 @@ func (m FooterComponents) GetSecondColumnContent() string {
 			loadingText.WriteString(m.loadings[key])
 		},
 	)
-	return styles.Hint.Render(loadingText.String())
+	return styles.Hint.Render(loadingText.String(), m.secondText)
 }
 
 func (m FooterComponents) GetThirdColumnContent() string {

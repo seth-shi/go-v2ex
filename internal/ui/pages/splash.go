@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/seth-shi/go-v2ex/internal/api"
 	"github.com/seth-shi/go-v2ex/internal/commands"
@@ -46,7 +45,10 @@ func (m splashPage) onConfigResult(conf *config.FileConfig) (tea.Model, tea.Cmd)
 	// return m, messages.RedirectCmd(RouteHelp)
 
 	// 把配置注入到其他页面
-	var cmds []tea.Cmd
+	var cmds = []tea.Cmd{
+		// 检查版本更新
+		messages.Post(messages.CheckUpgradeAppRequest{}),
+	}
 
 	// 没 token 去配置页面
 	if conf.Token == "" {

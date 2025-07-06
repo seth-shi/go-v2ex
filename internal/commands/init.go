@@ -13,6 +13,6 @@ func CheckAppHasNewVersion(currVersion string) tea.Cmd {
 			return nil
 		}
 
-		return messages.ShowToastRequest{Text: result.GetTitle()}
+		return messages.ProxyShowToastRequest{Text: result.GetTitle()}
 	}
 }

@@ -112,7 +112,7 @@ var (
 		"museum": "Project Museum", "ideas": "奇思妙想", "ustc": "中国科学技术大学", "closed": "关闭交易",
 		"bike": "骑行", "0x10c": "0x10c", "mushroom": "蘑菇", "paper": "Paper", "homme": "Homme", "dn": "域名",
 		"ruofan": "若饭", "techstars": "TechStars", "meteor": "Meteor", "haskell": "Haskell",
-		"sqlalchemy": "SQLAlchemy", "storm": "Storm", "soccer": "绿茵场", "sublime": "Sublime Text", "ubuntu": "Ubuntu",
+		"sqlalchemy": "SQLAlchemy", "storm": "Storm", "soccer": "绿茵场", "sublime": "Sublime FirstText", "ubuntu": "Ubuntu",
 		"fedora": "Fedora", "gentoo": "Gentoo", "la": "Los Angeles", "evernote": "Evernote", "tangcha": "唐茶",
 		"sandbox": "沙盒", "downvoted": "Down Voted", "reprocess": "信息处理中心", "guitar": "吉他", "time": "时间",
 		"visa": "签证", "dev": "Dev", "lightroom": "Lightroom", "aperture": "Aperture", "free": "免费赠送",

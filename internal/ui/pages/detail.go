@@ -163,9 +163,9 @@ func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	var cmds tea.Cmd
 	if data.Pagination.TotalCount > 0 {
 		cmds = messages.Post(
-			messages.ShowAlertRequest{
-				Text: data.Pagination.ToString(m.replyPage),
-				Help: detailKeyHelp,
+			messages.ShowStatusBarTextRequest{
+				FirstText:  data.Pagination.ToString(m.replyPage),
+				SecondText: detailKeyHelp,
 			},
 		)
 	}
@@ -333,5 +333,5 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 		return m.getReply(detail.Id)
 	}
 
-	return messages.Post(messages.ShowToastRequest{Text: "无评论加载"})
+	return messages.Post(messages.ProxyShowToastRequest{Text: "无评论加载"})
 }

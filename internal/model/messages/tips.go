@@ -1,12 +1,10 @@
 package messages
 
-type ShowAlertRequest struct {
-	Text string
-	Help string
+type ShowStatusBarTextRequest struct {
+	FirstText  string
+	SecondText string
 }
 
-type ShowToastRequest struct {
+type ProxyShowToastRequest struct {
 	Text string
 }
-
-type ShiftToastRequest struct{}

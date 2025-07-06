@@ -7,6 +7,8 @@ import (
 	"github.com/seth-shi/go-v2ex/internal/pkg"
 )
 
+type CheckUpgradeAppRequest struct{}
+
 type UpgradeStateMessage struct {
 	State *UpgradeState
 }

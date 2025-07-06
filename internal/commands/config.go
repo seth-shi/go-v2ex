@@ -3,16 +3,14 @@ package commands
 import (
 	"encoding/json"
 	"errors"
-	"os"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/seth-shi/go-v2ex/internal/config"
 	"github.com/seth-shi/go-v2ex/internal/model/messages"
+	"os"
 )
 
 func LoadConfig() tea.Cmd {
 	return func() tea.Msg {
-
 		cfg := config.NewFileConfig()
 		bf, err := os.ReadFile(config.SavePath())
 		if err != nil {
@@ -30,15 +28,21 @@ func LoadConfig() tea.Cmd {
 	}
 }
 
-func SaveToFile(conf *config.FileConfig) error {
-	bytesData, err := json.Marshal(conf)
-	if err != nil {
-		return err
-	}
+func SaveToFile(conf *config.FileConfig, msg string) tea.Cmd {
+	return func() tea.Msg {
+		bytesData, err := json.Marshal(conf)
+		if err != nil {
+			return err
+		}
 
-	if err = os.WriteFile(config.SavePath(), bytesData, 0644); err != nil {
-		return err
-	}
+		if err = os.WriteFile(config.SavePath(), bytesData, 0644); err != nil {
+			return err
+		}
 
-	return nil
+		if msg == "" {
+			return nil
+		}
+
+		return messages.ProxyShowToastRequest{Text: msg}
+	}
 }

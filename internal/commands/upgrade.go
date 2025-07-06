@@ -203,7 +203,7 @@ func CheckDownloadProcessMessages(state *messages.UpgradeState) func(t time.Time
 		if err := state.Error(); err != nil {
 			// 开始移动文件
 			// 解压 zip 包
-			return messages.ShowAlertRequest{Text: err.Error()}
+			return messages.ShowStatusBarTextRequest{FirstText: err.Error()}
 		}
 
 		if state.Finished() {

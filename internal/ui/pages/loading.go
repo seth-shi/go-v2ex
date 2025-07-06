@@ -8,8 +8,8 @@ import (
 func loadingView(w, h int, title string) string {
 	return styles.Err.
 		Align(lipgloss.Center).
-		PaddingTop(max(h/2, 10)).
+		PaddingTop(max(h/4, 2)).
 		Bold(true).
-		Width(max(w, 20)).
+		Width(w).
 		Render(title)
 }

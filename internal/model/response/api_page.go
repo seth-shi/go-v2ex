@@ -14,7 +14,7 @@ type PageResponse struct {
 
 func (p *PageResponse) ToString(currPage int) string {
 	return fmt.Sprintf(
-		"╭─ %d/%d • %d条",
+		"%d/%d • %d条",
 		currPage,
 		p.TotalPages,
 		p.TotalCount,
@@ -37,7 +37,7 @@ func NewPerTenPageInfo(total, page int) *PerTenPageInfo {
 
 func (p *PerTenPageInfo) ToString() string {
 	return fmt.Sprintf(
-		"╭─ %d/%d • %d条",
+		"%d/%d • %d条",
 		p.CurrPage,
 		p.TotalPage(),
 		p.TotalCount,

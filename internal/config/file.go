@@ -46,17 +46,17 @@ func (c *FileConfig) IsMockEnv() bool {
 
 func (c *FileConfig) SwitchShowMode() {
 	c.ShowMode++
-	if c.ShowMode > consts.ShowModeAll {
-		c.ShowMode = consts.ShowModeHidden
+	if c.ShowMode > consts.ShowModeHideAll {
+		c.ShowMode = consts.ShowModeAll
 	}
 }
 func (c *FileConfig) GetShowModeText() string {
 	var (
 		m = map[int]string{
-			consts.ShowModeHidden:                "隐藏所有底部",
-			consts.ShowModeLeftAndRight:          "不显示请求限制",
-			consts.ShowModeLeftAndRightWithLimit: "显示左侧和右侧+请求限制量",
-			consts.ShowModeAll:                   "显示所有",
+			consts.ShowModeAll:       "显示所有",
+			consts.ShowModeHideAll:   "隐藏所有",
+			consts.ShowModeHideLimit: "不显示请求限制",
+			consts.ShowModeHideHelp:  "隐藏帮助",
 		}
 	)
 
@@ -64,7 +64,7 @@ func (c *FileConfig) GetShowModeText() string {
 }
 
 func (c *FileConfig) ShowFooter() bool {
-	return c.ShowMode != consts.ShowModeHidden
+	return c.ShowMode != consts.ShowModeHideAll
 }
 
 func (c *FileConfig) ShowHelp() bool {
@@ -72,8 +72,8 @@ func (c *FileConfig) ShowHelp() bool {
 }
 
 func (c *FileConfig) ShowLimit() bool {
-	return c.ShowMode == consts.ShowModeLeftAndRightWithLimit ||
-		c.ShowMode == consts.ShowModeAll
+	return c.ShowMode == consts.ShowModeAll ||
+		c.ShowMode == consts.ShowModeHideLimit
 }
 
 func SavePath() string {

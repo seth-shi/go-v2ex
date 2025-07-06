@@ -1,8 +1,6 @@
 package pages
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -39,6 +37,7 @@ func (m Model) Init() tea.Cmd {
 		// 跳转到开平页面
 		m.footer.Init(),
 		m.alert.Init(),
+		// 跳转去开屏页面
 		commands.Redirect(RouteSplash),
 	)
 }
@@ -88,8 +87,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		ff           strings.Builder
-		statusHeight = 0
+		footer       = m.footer.View()
+		footerHeight = lipgloss.Height(footer)
 	)
 
 	return m.alert.Render(
@@ -97,9 +96,9 @@ func (m Model) View() string {
 			lipgloss.Top,
 			lipgloss.
 				NewStyle().
-				Height(m.h-statusHeight).
+				Height(m.h-footerHeight).
 				Render(m.navigator.View()),
-			ff.String(),
+			footer,
 		),
 	)
 }

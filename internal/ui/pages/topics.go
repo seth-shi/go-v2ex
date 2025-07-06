@@ -149,9 +149,9 @@ func (m *topicPage) onTopicResult(msgType messages.GetTopicResponse) tea.Cmd {
 	// 显示错误和页码
 	pageInfo := msgType.Data.Pagination.ToString()
 	return messages.Post(
-		messages.ShowAlertRequest{
-			Text: pageInfo,
-			Help: keyHelp,
+		messages.ShowStatusBarTextRequest{
+			FirstText:  pageInfo,
+			SecondText: keyHelp,
 		},
 	)
 }
