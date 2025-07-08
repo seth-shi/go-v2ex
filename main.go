@@ -4,7 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dromara/carbon/v2"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/internal/ui/pages"
+	"github.com/seth-shi/go-v2ex/pages"
 )
 
 func init() {
