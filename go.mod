@@ -14,14 +14,16 @@ require (
 	github.com/eliukblau/pixterm v1.3.2
 	github.com/google/go-github/v73 v73.0.0
 	github.com/hashicorp/go-version v1.7.0
-	github.com/mcuadros/go-defaults v1.2.0
+	github.com/kevm/bubbleo v0.1.5
 	github.com/mholt/archives v0.1.3
 	github.com/minio/selfupdate v0.6.0
+	github.com/mistakenelf/teacup v0.4.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
 	github.com/puzpuzpuz/xsync/v4 v4.1.0
 	github.com/samber/lo v1.50.0
 	github.com/stretchr/testify v1.10.0
+	go.dalton.dog/bubbleup v1.0.0
 	golang.org/x/sync v0.15.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	resty.dev/v3 v3.0.0-beta.3
