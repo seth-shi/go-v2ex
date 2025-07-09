@@ -7,7 +7,6 @@ import (
 	"github.com/seth-shi/go-v2ex/api"
 	"github.com/seth-shi/go-v2ex/commands"
 	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/model"
 	"github.com/seth-shi/go-v2ex/pkg"
 )
 
@@ -29,14 +28,15 @@ func (m splashPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case messages.LoadConfigResult:
-		return m.onConfigResult(msg.Result)
+		return m.onConfigResult(msg)
 	}
 
 	return m, nil
 }
 
-func (m splashPage) onConfigResult(conf *model.FileConfig) (tea.Model, tea.Cmd) {
+func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, tea.Cmd) {
 
+	conf := msg.Result
 	pkg.SetupLogger(conf)
 	api.SetUpHttpClient(conf)
 	pkg.SetUpImageHttpClient(conf)
@@ -44,6 +44,7 @@ func (m splashPage) onConfigResult(conf *model.FileConfig) (tea.Model, tea.Cmd) 
 	// 把配置注入到其他页面
 	var cmds = []tea.Cmd{
 		// 检查版本更新
+		commands.AlertError(msg.Err),
 		commands.Post(messages.CheckUpgradeAppRequest{}),
 	}
 

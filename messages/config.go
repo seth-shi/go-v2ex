@@ -6,4 +6,5 @@ import (
 
 type LoadConfigResult struct {
 	Result *model.FileConfig
+	Err    error
 }

@@ -18,16 +18,18 @@ func LoadConfig() tea.Cmd {
 		bf, err := os.ReadFile(model.ConfigPath())
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				return err
+				return messages.LoadConfigResult{Result: cfg, Err: err}
 			}
 		}
 
-		err = json.Unmarshal(bf, &cfg)
-		if err != nil {
-			return err
+		if bf != nil {
+			err = json.Unmarshal(bf, &cfg)
+			if err != nil {
+				return messages.LoadConfigResult{Result: cfg, Err: err}
+			}
+			g.Config.Set(cfg)
 		}
 
-		// TODO 保存配置生效
 		return messages.LoadConfigResult{Result: cfg}
 	}
 }
