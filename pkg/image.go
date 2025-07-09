@@ -81,7 +81,8 @@ func ExtractImgURLs(content string) []string {
 
 type imgRes struct {
 	URL  string
-	Data string
+	Data image.Image
+	err  error
 }
 
 func ProcessURLs(urls []string, width int) map[string]string {
@@ -89,13 +90,12 @@ func ProcessURLs(urls []string, width int) map[string]string {
 	var (
 		wg          sync.WaitGroup
 		chSemaphore = make(chan struct{}, 5)
-		chImgRes    = make(chan imgRes)
+		chImgRes    = make(chan imgRes, len(urls))
 	)
 	for _, l := range urls {
-		wg.Add(1)
-		// 限制并发量
 		chSemaphore <- struct{}{}
-		go processImage(l, width, chSemaphore, chImgRes, &wg)
+		wg.Add(1)
+		go downloadImageRes(l, chSemaphore, chImgRes, &wg)
 	}
 	go func() {
 		wg.Wait()
@@ -107,8 +107,20 @@ func ProcessURLs(urls []string, width int) map[string]string {
 		result = make(map[string]string)
 	)
 	for val := range chImgRes {
-		slog.Info("处理图片完成", slog.String("url", val.URL), slog.String("image", val.Data))
-		result[val.URL] = val.Data
+		if val.err != nil {
+			slog.Error("图片处理失败", slog.String("url", val.URL), slog.Any("err", val.err))
+			result[val.URL] = ""
+			continue
+		}
+
+		str, err := imageToAnsImage(width, val.Data)
+		if err != nil {
+			slog.Error("图片转字符失败", slog.String("url", val.URL), slog.Any("err", err))
+			result[val.URL] = ""
+			continue
+		}
+
+		result[val.URL] = str
 	}
 
 	// 等待所有任务完成
@@ -116,71 +128,67 @@ func ProcessURLs(urls []string, width int) map[string]string {
 }
 
 // 处理单个图片
-func processImage(imgUrl string, width int, semaphore chan struct{}, res chan imgRes, wg *sync.WaitGroup) {
-	defer func() {
-		if r := recover(); r != nil {
-			slog.Error("processImage panic", slog.String("err", fmt.Sprintf("%v", r)))
-		}
+func downloadImageRes(imgUrl string, semaphore chan struct{}, res chan imgRes, wg *sync.WaitGroup) {
 
+	defer func() {
 		<-semaphore
 		wg.Done()
 	}()
 
-	data, err := imageToString(imgUrl, width)
+	var (
+		data = imgRes{URL: imgUrl}
+	)
+
+	// 下载图片
+	resp, err := imgClient.
+		R().
+		Get(imgUrl)
 	if err != nil {
-		slog.Error("图片转字符失败", slog.Any("err", lo.Substring(err.Error(), 0, 50)))
+		data.err = err
+		res <- data
+		return
+	}
+	defer resp.Body.Close()
+
+	contentType := resp.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "image") {
+		data.err = fmt.Errorf("响应头不是图片:%s", contentType)
+		res <- data
+		return
+	}
+
+	decodeImg, _, err := image.Decode(resp.Body)
+	if err != nil {
+		data.err = fmt.Errorf("解码图片失败:%+v", err)
+		res <- data
 		return
 	}
 
 	res <- imgRes{
 		URL:  imgUrl,
-		Data: data,
+		Data: decodeImg,
 	}
 }
 
-func imageToString(
-	imgUrl string,
-	width int,
-) (data string, err error) {
+func imageToAnsImage(width int, img image.Image) (data string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("imageToString panic", slog.String("err", fmt.Sprintf("%v", r)))
+			err = fmt.Errorf("%v", r)
+			slog.Error("imageToString panic", slog.Any("err", err))
 		}
 	}()
 
 	var (
 		imgData *ansimage.ANSImage
 	)
-
-	res, err := imgClient.
-		R().
-		Get(imgUrl)
-
-	if err != nil {
-		return "", fmt.Errorf("图片下载失败:%s", err.Error())
-	}
-
-	defer res.Body.Close()
-
-	contentType := res.Header().Get("Content-Type")
-	if !strings.Contains(contentType, "image") {
-		return "", fmt.Errorf("响应头不是图片:%s", contentType)
-	}
-
-	decodeImg, _, err := image.Decode(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("解码图片失败:%+v", err)
-	}
-
 	// 宽度
-	imageWidth := decodeImg.Bounds().Max.X - decodeImg.Bounds().Min.X
+	imageWidth := img.Bounds().Max.X - img.Bounds().Min.X
 	imageWidth /= 10
-	slog.Info("图片宽度", slog.Int("width", width), slog.Int("imageWidth", imageWidth))
 	if imageWidth < width {
 		width = imageWidth
 	}
 	imgData, err = ansimage.NewScaledFromImage(
-		decodeImg,
+		img,
 		0,
 		width,
 		color.White,
@@ -192,6 +200,7 @@ func imageToString(
 		return
 	}
 
-	data = imgData.Render()
-	return
+	slog.Info("图片渲染完成", slog.Int("imageWidth", imgData.Width()))
+
+	return imgData.Render(), nil
 }

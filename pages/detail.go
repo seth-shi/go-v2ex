@@ -284,7 +284,6 @@ func (m *detailPage) requestImages(urls []string) tea.Cmd {
 	}
 }
 func (m *detailPage) onImageLoaded(result messages.GetImageResult) tea.Cmd {
-	slog.Info("图片下载成功", slog.Int("count", len(result.Result)), slog.Any("urls", result))
 	m.imageDataMap = lo.Assign(m.imageDataMap, result.Result)
 	m.refreshViewContent()
 	return nil

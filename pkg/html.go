@@ -1,23 +1,59 @@
 package pkg
 
 import (
-	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
-	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
+	"os"
+	"sync"
+
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/glamour/styles"
+	"github.com/muesli/termenv"
+	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/g"
+	"golang.org/x/term"
 )
+
+var (
+	renderer *glamour.TermRenderer
+	once     sync.Once
+)
+
+func getRenderer(w int) *glamour.TermRenderer {
+
+	once.Do(
+		func() {
+			var conf = ansi.StyleConfig{}
+			if !term.IsTerminal(int(os.Stdout.Fd())) {
+				conf = styles.NoTTYStyleConfig
+			} else {
+				if termenv.HasDarkBackground() {
+					conf = styles.DarkStyleConfig
+				} else {
+					conf = styles.LightStyleConfig
+				}
+			}
+
+			// 主要文字颜色
+			conf.Document.StylePrimitive.Color = lo.ToPtr("#000000")
+			renderer, _ = glamour.NewTermRenderer(
+				glamour.WithBaseURL("https://www.v2ex.com"),
+				glamour.WithEmoji(),
+				glamour.WithWordWrap(w),
+				glamour.WithStyles(conf),
+			)
+		},
+	)
+
+	return renderer
+}
 
 func SafeRenderHtml(input string) string {
 
-	markdown, err := htmltomarkdown.ConvertString(
-		input,
-		converter.WithDomain("https://www.v2ex.com"),
+	var (
+		w, _ = g.Window.GetSize()
 	)
-	if err != nil {
-		return input
-	}
 
-	out, err := glamour.Render(markdown, styles.AsciiStyle)
+	out, err := getRenderer(w).Render(input)
 	if err != nil {
 		return input
 	}
