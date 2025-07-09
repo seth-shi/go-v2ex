@@ -24,6 +24,12 @@ func (s *Safe[T]) Get() T {
 	return s.data
 }
 
+func (s *Safe[T]) Set(v T) {
+	s.locker.Lock()
+	s.locker.Unlock()
+	s.data = v
+}
+
 func (s *Safe[T]) Update(fn func(T)) {
 	s.locker.Lock()
 	s.locker.Unlock()
