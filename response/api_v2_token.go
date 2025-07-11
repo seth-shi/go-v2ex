@@ -13,3 +13,6 @@ type v2TokenResult struct {
 	LastUsed    int    `json:"last_used"`
 	Created     int64  `json:"created"`
 }
+
+// TODO 获取个人信息, 显示是自己
+// https://www.v2ex.com/api/v2/member

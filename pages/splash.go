@@ -61,14 +61,20 @@ func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, te
 	// 去触发对应的地方获取数据
 	cmds = append(
 		cmds,
-		// 先跳转到主题页
-		commands.Redirect(RouteTopic),
-		// 获取个人信息
+		// 获取 token 过期信息
 		tea.Sequence(
 			messages.LoadingGetToken.PostStart(),
 			api.V2ex.GetToken(context.Background()),
 			messages.LoadingGetToken.PostEnd(),
 		),
+		// 获取个人信息
+		tea.Sequence(
+			messages.LoadingMe.PostStart(),
+			api.V2ex.Me(context.Background()),
+			messages.LoadingMe.PostEnd(),
+		),
+		// 先跳转到主题页
+		commands.Redirect(RouteTopic),
 	)
 	return m, tea.Sequence(cmds...)
 }

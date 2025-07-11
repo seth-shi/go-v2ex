@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/glamour/styles"
 	"github.com/muesli/termenv"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/g"
 	"golang.org/x/term"
 )
 
@@ -47,11 +46,7 @@ func getRenderer(w int) *glamour.TermRenderer {
 	return renderer
 }
 
-func SafeRenderHtml(input string) string {
-
-	var (
-		w, _ = g.Window.GetSize()
-	)
+func SafeRenderHtml(input string, w int) string {
 
 	out, err := getRenderer(w).Render(input)
 	if err != nil {

@@ -35,7 +35,7 @@ type SupplementResult struct {
 	renderContent string
 }
 
-func (r V2DetailResult) GetContent() string {
+func (r V2DetailResult) GetContent(w int) string {
 
 	if r.renderContent == "" {
 		var content = r.Content
@@ -47,13 +47,13 @@ func (r V2DetailResult) GetContent() string {
 			}
 		}
 
-		r.renderContent = pkg.SafeRenderHtml(content)
+		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
 	return r.renderContent
 }
 
-func (r SupplementResult) GetContent() string {
+func (r SupplementResult) GetContent(w int) string {
 	if r.renderContent == "" {
 		var content = r.Content
 		// 如果是链接出现多次, 那么只保留一次
@@ -64,7 +64,7 @@ func (r SupplementResult) GetContent() string {
 			}
 		}
 
-		r.renderContent = pkg.SafeRenderHtml(content)
+		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
 	return r.renderContent

@@ -21,7 +21,7 @@ type V2ReplyResult struct {
 	renderContent string
 }
 
-func (r *V2ReplyResult) GetContent() string {
+func (r *V2ReplyResult) GetContent(w int) string {
 
 	if r.renderContent == "" {
 		var content = r.Content
@@ -33,7 +33,7 @@ func (r *V2ReplyResult) GetContent() string {
 			}
 		}
 
-		r.renderContent = pkg.SafeRenderHtml(content)
+		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
 	return r.renderContent
