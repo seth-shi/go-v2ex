@@ -90,14 +90,16 @@ func ProcessURLs(urls []string, width int) map[string]string {
 	var (
 		wg          sync.WaitGroup
 		chSemaphore = make(chan struct{}, 5)
-		chImgRes    = make(chan imgRes, len(urls))
+		chImgRes    = make(chan imgRes)
 	)
-	for _, l := range urls {
-		chSemaphore <- struct{}{}
-		wg.Add(1)
-		go downloadImageRes(l, chSemaphore, chImgRes, &wg)
-	}
+
 	go func() {
+		for _, l := range urls {
+			chSemaphore <- struct{}{}
+			wg.Add(1)
+			go downloadImageRes(l, chSemaphore, chImgRes, &wg)
+		}
+
 		wg.Wait()
 		close(chImgRes)
 	}()

@@ -55,6 +55,7 @@ type detailPage struct {
 	id         int64
 	replyPage  int
 	replyIndex int
+	opMember   response.MemberResult
 }
 
 func newDetailPage() detailPage {
@@ -70,6 +71,8 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	// 显示是否是 pro && 是否有人
 
 	switch msgType := msg.(type) {
 	case messages.GetDetailRequest:
@@ -187,21 +190,33 @@ func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 				Width(w - 2).
 				BorderRight(false).
 				BorderBottom(false)
+		me = g.Me.Get()
 	)
 
 	replies.WriteString("\n")
+
 	for _, r := range data.Result {
 		m.replyIndex++
+
+		var (
+			opText string
+		)
+
+		if r.Member.Id == m.opMember.Id {
+			opText = styles.MemberOp
+		}
+
 		floor := fmt.Sprintf(
-			"#%d · %s @%s",
+			"#%d · %s @%s%s",
 			m.replyIndex,
 			carbon.CreateFromTimestamp(r.Created),
-			r.Member.Username,
+			r.Member.GetUserNameLabel(me.Id),
+			opText,
 		)
 
 		replies.WriteString(replyTitleStyle.Render(floor))
 		replies.WriteString("\n")
-		replies.WriteString(r.GetContent())
+		replies.WriteString(r.GetContent(w))
 		replies.WriteString("\n")
 	}
 
@@ -295,9 +310,11 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 		w, _              = g.Window.GetSize()
 		contentWidth      = w - 2
 		content           strings.Builder
-		topicContent      = detail.GetContent()
+		topicContent      = detail.GetContent(w)
 		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
+		me                = g.Me.Get()
 	)
+	m.opMember = detail.Member
 
 	content.WriteString(
 		contentTitleStyle.
@@ -307,7 +324,8 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
 					styles.Bold.Render(detail.Node.Title),
 					detail.Url,
-					detail.Member.Username, carbon.CreateFromTimestamp(detail.Created),
+					detail.Member.GetUserNameLabel(me.Id),
+					carbon.CreateFromTimestamp(detail.Created),
 					detail.Replies,
 					lipgloss.NewStyle().
 						Bold(true).
@@ -324,7 +342,7 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 
 		desc := fmt.Sprintf(
 			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
-			c.GetContent(),
+			c.GetContent(w),
 		)
 		content.WriteString(contentTitleStyle.Width(w).Render(desc))
 	}
