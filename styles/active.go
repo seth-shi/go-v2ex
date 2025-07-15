@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Err = lipgloss.NewStyle().Foreground(lipgloss.Color("#c0392b"))
+	Active = lipgloss.NewStyle().Foreground(lipgloss.Color("#2980b9"))
 )

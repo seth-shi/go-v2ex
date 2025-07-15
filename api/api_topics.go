@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/seth-shi/go-v2ex/g"
 	"github.com/seth-shi/go-v2ex/messages"
+	"github.com/seth-shi/go-v2ex/response"
 )
 
 func (cli *v2exClient) GetTopics(
@@ -18,13 +19,35 @@ func (cli *v2exClient) GetTopics(
 		var (
 			nodeIndex = g.Config.Get().ActiveTab
 			node      = g.GetGroupNode(nodeIndex)
+			res       []response.TopicResult
+			total     int
+			err       error
 		)
 
-		res, err := cli.topicApi.GetTopicsByGroupNode(ctx, node, page)
+		// 如果是 myNodes, 那么就去用 V2 的接口
+		v2 := node.Key == g.NodesMy || g.Session.ChooseApiV2.Load()
+		// 最新最热, 只能用 v1
+		if node.Key == g.HotNode || node.Key == g.LatestNode {
+			v2 = false
+		}
+
+		g.Session.IsApiV2.Store(v2)
+		if v2 {
+			res, total, err = cli.v2TopicApi.GetTopicsByGroupNode(ctx, node, page)
+		} else {
+			res, total, err = cli.v1TopicApi.GetTopicsByGroupNode(ctx, node, page)
+		}
+
 		if err != nil {
 			return errorWrapper("主题", err)
 		}
 
-		return messages.GetTopicResponse{Data: res}
+		return messages.GetTopicResponse{
+			Data: res,
+			PageInfo: &response.PerTenPageInfo{
+				TotalCount: total,
+				CurrPage:   page,
+			},
+		}
 	}
 }

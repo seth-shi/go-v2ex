@@ -3,6 +3,7 @@ package pages
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -111,8 +112,22 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.page < m.totalPages {
 				return m, m.getTopics(m.page + 1)
 			}
+			// 如果用 V1, 提醒可以是用 R 键切换
+			canChoose := g.GetGroupNode(g.Config.Get().ActiveTab).CanChooseApiVersion()
+			if !g.Session.IsApiV2.Load() && canChoose {
+				return m, commands.AlertInfo(
+					fmt.Sprintf(
+						"按[%s]键可切换接口版本", strings.Join(
+							consts.AppKeyMap.KeyR.Keys(),
+							" ",
+						),
+					),
+				)
+			}
+
 		case key.Matches(msgType, consts.AppKeyMap.KeyR):
-			m.page = 1
+			// 切换 V2 接口
+			g.Session.ChooseApiV2.Store(!g.Session.ChooseApiV2.Load())
 			return m, m.getTopics(1)
 		default:
 			return m, nil
@@ -156,17 +171,27 @@ func (m topicPage) moveTabs(add int) (tea.Model, tea.Cmd) {
 }
 
 func (m topicPage) onTopicResult(msgType messages.GetTopicResponse) (tea.Model, tea.Cmd) {
-	m.topics = msgType.Data.Items
+
+	var (
+		result   = msgType.Data
+		pageInfo = msgType.PageInfo
+		apiText  = "v1@api"
+	)
+
+	m.topics = result
 	// 会话的直接设置
-	m.page = msgType.Data.Pagination.CurrPage
-	m.totalPages = msgType.Data.Pagination.TotalPage()
+	m.page = pageInfo.CurrPage
+	m.totalPages = pageInfo.TotalPage()
 	// 显示错误和页码
-	pageInfo := msgType.Data.Pagination.ToString()
 	m.loading = false
+
+	if g.Session.IsApiV2.Load() {
+		apiText = "v2@api"
+	}
 
 	return m, commands.Post(
 		messages.ShowStatusBarTextRequest{
-			FirstText: pageInfo,
+			FirstText: fmt.Sprintf("%s %s", apiText, pageInfo.ToString()),
 			HelpText:  keyHelp,
 		},
 	)
@@ -210,12 +235,7 @@ func (m topicPage) renderTabs() string {
 	// 增加一行显示二级
 	if activeTab != nil {
 		doc.WriteString("\n")
-		nodes := lo.Map(
-			activeTab.Nodes, func(key string, index int) string {
-				return lo.ValueOr(g.NodeMap, key, key)
-			},
-		)
-		doc.WriteString(styles.Hint.PaddingLeft(1).Render(strings.Join(nodes, " · ")))
+		doc.WriteString(styles.Hint.PaddingLeft(1).Render(activeTab.Title()))
 	}
 
 	return doc.String()
@@ -228,6 +248,8 @@ func (m topicPage) renderTables() string {
 	// 表格
 	var (
 		w, _        = g.Window.GetSize()
+		me          = g.Me.Get()
+		headers     = []string{"#", "节点", "标题", "OP", "回复数", "时间"}
 		rows        [][]string
 		columnWidth = []int{
 			3, // 序号
@@ -238,28 +260,39 @@ func (m topicPage) renderTables() string {
 			20, // 时间
 		}
 	)
+	if g.Session.IsApiV2.Load() && len(headers) > 3 {
+		headers[3] = "LR"
+	}
+
 	for i, topic := range m.topics {
 
 		// 设置列自适应宽度
-		nodeTitle := lo.ValueOr(g.NodeMap, topic.Node, topic.Node)
+		nodeTitle := topic.Node.Title
 		if len(columnWidth) > 1 && len(nodeTitle) > columnWidth[1] {
 			// lipgloss.Width 处理中文, len 处理空格
 			columnWidth[1] = max(lipgloss.Width(nodeTitle), len(nodeTitle))
 		}
-		if len(columnWidth) > 3 && len(topic.Member) > columnWidth[3] {
-			columnWidth[3] = max(lipgloss.Width(topic.Member), len(topic.Member))
+
+		// 这样子就不会显示 OP
+		member := topic.Member.GetUserNameLabel(me.Id)
+		if len(columnWidth) > 3 && len(member) > columnWidth[3] {
+			columnWidth[3] = min(lipgloss.Width(member), len(member)) + 3
 		}
 
 		rows = append(
 			rows, []string{
 				strconv.Itoa(i + 1),
 				nodeTitle,
-				topic.Title,
-				topic.Member,
-				strconv.Itoa(topic.Replies),
+				topic.GetTitle(),
+				member,
+				styles.HotText(topic.Replies),
 				carbon.CreateFromTimestamp(topic.LastTouched).String(),
 			},
 		)
+	}
+
+	if len(columnWidth) > 1 && columnWidth[1] < 4 {
+		columnWidth[1] = 4
 	}
 
 	// len(tableStyles) + 1 = 列数 (再 +1 等于边框数)
@@ -288,14 +321,14 @@ func (m topicPage) renderTables() string {
 				}
 
 				if row == m.index {
-					style = style.Foreground(lipgloss.Color("#1e9fff")).Bold(true)
+					style = styles.Active.Bold(true)
 					rows[row][0] = "*"
 				}
 
 				return style
 			},
 		).
-		Headers("#", "节点", "标题", "member", "评论数", "最后回复时间").
+		Headers(headers...).
 		Rows(rows...)
 	return t.String()
 }

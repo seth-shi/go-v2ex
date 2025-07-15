@@ -13,12 +13,6 @@ type MemberResult struct {
 	Pro      int    `json:"pro"`
 }
 
-type NodeInfoResult struct {
-	Id    int    `json:"id"`
-	Name  string `json:"name"`
-	Title string `json:"title"`
-}
-
 func (m MemberResult) GetUserNameLabel(meId int) string {
 	var labels []string
 	if m.Pro > 0 {

@@ -6,7 +6,7 @@ import (
 
 type V2TopicResponse struct {
 	Result     []V2TopicResult `json:"result"`
-	Pagination PageResponse    `json:"pagination"`
+	Pagination V2PageResponse  `json:"pagination"`
 }
 
 type V2TopicResult struct {

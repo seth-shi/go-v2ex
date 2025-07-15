@@ -18,7 +18,7 @@ func (cli *v2exClient) GetToken(ctx context.Context) tea.Cmd {
 			Get("/api/v2/token")
 
 		if err != nil {
-			return err
+			return errorWrapper("令牌", err)
 		}
 
 		// 准备过期的话, 发送提醒

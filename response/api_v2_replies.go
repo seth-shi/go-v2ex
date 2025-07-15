@@ -9,7 +9,7 @@ import (
 
 type V2ReplyResponse struct {
 	Result     []V2ReplyResult `json:"result"`
-	Pagination PageResponse    `json:"pagination"`
+	Pagination V2PageResponse  `json:"pagination"`
 }
 
 type V2ReplyResult struct {

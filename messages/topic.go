@@ -5,5 +5,6 @@ import (
 )
 
 type GetTopicResponse struct {
-	Data *response.GroupTopic
+	Data     []response.TopicResult
+	PageInfo *response.PerTenPageInfo
 }

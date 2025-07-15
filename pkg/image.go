@@ -115,6 +115,7 @@ func ProcessURLs(urls []string, width int) map[string]string {
 			continue
 		}
 
+		slog.Info("图片信息", slog.String("size", val.Data.Bounds().Size().String()), slog.String("url", val.URL))
 		str, err := imageToAnsImage(width, val.Data)
 		if err != nil {
 			slog.Error("图片转字符失败", slog.String("url", val.URL), slog.Any("err", err))
@@ -122,6 +123,7 @@ func ProcessURLs(urls []string, width int) map[string]string {
 			continue
 		}
 
+		slog.Info("图片处理完成", slog.Int("size", len(str)), slog.String("url", val.URL))
 		result[val.URL] = str
 	}
 
@@ -189,6 +191,12 @@ func imageToAnsImage(width int, img image.Image) (data string, err error) {
 	if imageWidth < width {
 		width = imageWidth
 	}
+	// 表情包
+	if imageWidth < 10 {
+		width = 20
+	}
+
+	slog.Info("图片开始渲染", slog.Int("width", width))
 	imgData, err = ansimage.NewScaledFromImage(
 		img,
 		0,
@@ -202,7 +210,7 @@ func imageToAnsImage(width int, img image.Image) (data string, err error) {
 		return
 	}
 
-	slog.Info("图片渲染完成", slog.Int("imageWidth", imgData.Width()))
+	slog.Info("图片渲染完成", slog.Int("width", imgData.Width()))
 
 	return imgData.Render(), nil
 }
