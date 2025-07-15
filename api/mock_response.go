@@ -76,6 +76,7 @@ var (
 		"api_topics_hot.json_.json":             mockHotTopics,
 		"api_v2_nodes_qna_topics_p_1.json":      mockQnaTopics,
 		"api_v2_token_.json":                    mockToken,
+		"api_v2_member_.json":                   mockMember,
 		"api_v2_topics_560297_.json":            mockDetail,
 		"api_v2_topics_560297_replies_p_1.json": mockReply(1),
 		"api_v2_topics_560297_replies_p_2.json": mockReply(2),
@@ -125,6 +126,17 @@ func mockDetail() string {
 `
 }
 
+func mockMember() string {
+	return `
+{
+  "success": true, 
+  "message": "Current token details", 
+  "result": {
+    "id": 1
+  }
+}`
+}
+
 func mockToken() string {
 
 	now := time.Now().Unix()
@@ -163,10 +175,7 @@ func mockQnaTopics() string {
             "id": 560297,
             "title": "尝试写了一个 Gameboy 模拟器，支持在命令行下“云游戏串流”游玩",
             "replies": 42,
-            "member": {
-                "id": 250736,
-                "username": "AaronLiu00"
-            },
+            "last_reply_by": "AaronLiu00",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -179,10 +188,7 @@ func mockQnaTopics() string {
             "id": 467407,
             "title": "分享个自用的小工具~ 给你的 iPhone 发自定义推送",
             "replies": 218,
-            "member": {
-                "id": 58816,
-                "username": "finab"
-            },
+            "last_reply_by": "finab",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -195,10 +201,7 @@ func mockQnaTopics() string {
             "id": 555768,
             "title": "Tea + Cloud，那个为开发者而生的笔记应用，它上天（云）了！",
             "replies": 33,
-            "member": {
-                "id": 344097,
-                "username": "hk3475"
-            },
+            "last_reply_by": "hk3475",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -211,10 +214,7 @@ func mockQnaTopics() string {
             "id": 553321,
             "title": "利用公交线路可视化城市结构",
             "replies": 60,
-            "member": {
-                "id": 363133,
-                "username": "96486d9b"
-            },
+            "last_reply_by": "96486d9b",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -227,10 +227,7 @@ func mockQnaTopics() string {
             "id": 532913,
             "title": "老爹的铁铺上线，给老爸做个广告，云上铁铺 :)",
             "replies": 166,
-            "member": {
-                "id": 358742,
-                "username": "bokchoys"
-            },
+            "last_reply_by": "bokchoys",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -243,10 +240,7 @@ func mockQnaTopics() string {
             "id": 574208,
             "title": "歪国程序员脑洞真的不是一般的大，这次他们要在 URL 上打游戏！😂",
             "replies": 10,
-            "member": {
-                "id": 7682,
-                "username": "keelii"
-            },
+            "last_reply_by": "keelii",
             "node": {
                 "id": 519,
                 "name": "ideas",
@@ -259,10 +253,7 @@ func mockQnaTopics() string {
             "id": 561958,
             "title": "我想开发一门新的编程语言，不过个人能力有限（编程技术很菜ヾ(ｏ･ω･)ﾉ，不过并不影响我对编程语言的理解），希望有人帮助我开发编译器或解释器，完整的想法我已经有了，就等实现了。",
             "replies": 319,
-            "member": {
-                "id": 409720,
-                "username": "Qiaogui"
-            },
+            "last_reply_by": "Qiaogui",
             "node": {
                 "id": 300,
                 "name": "programmer",
@@ -275,10 +266,7 @@ func mockQnaTopics() string {
             "id": 549223,
             "title": "NVIDIA 基于自家 Jetson Nano 开源机器人 Jetbot DIY 资料汇总",
             "replies": 7,
-            "member": {
-                "id": 153974,
-                "username": "unbug"
-            },
+            "last_reply_by": "unbug",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -291,10 +279,7 @@ func mockQnaTopics() string {
             "id": 541987,
             "title": "各大网站登陆方式， 包括爬虫，麻麻再也不用担心我学习爬虫啦，哈哈",
             "replies": 118,
-            "member": {
-                "id": 319513,
-                "username": "CriseLYJ"
-            },
+            "last_reply_by": "CriseLYJ",
             "node": {
                 "id": 90,
                 "name": "python",
@@ -307,10 +292,7 @@ func mockQnaTopics() string {
             "id": 548519,
             "title": "工作三到五年后接触机器学习的入门建议",
             "replies": 43,
-            "member": {
-                "id": 133974,
-                "username": "theworldsong"
-            },
+            "last_reply_by": "theworldsong",
             "node": {
                 "id": 678,
                 "name": "ml",
@@ -323,10 +305,7 @@ func mockQnaTopics() string {
             "id": 675067,
             "title": "程序员就一定要去 IT 公司工作吗？",
             "replies": 141,
-            "member": {
-                "id": 153475,
-                "username": "clockOS"
-            },
+            "last_reply_by": "clockOS",
             "node": {
                 "id": 300,
                 "name": "programmer",
@@ -339,10 +318,7 @@ func mockQnaTopics() string {
             "id": 552627,
             "title": "开源肖像-向伟大的开源领袖们致敬",
             "replies": 2,
-            "member": {
-                "id": 79516,
-                "username": "bigezhang"
-            },
+            "last_reply_by": "bigezhang",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -355,10 +331,7 @@ func mockQnaTopics() string {
             "id": 611963,
             "title": "数据结构在实际项目中的使用 - 链表",
             "replies": 11,
-            "member": {
-                "id": 339252,
-                "username": "gansteed"
-            },
+            "last_reply_by": "gansteed",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -371,10 +344,7 @@ func mockQnaTopics() string {
             "id": 211400,
             "title": "收集 V2EX 上的撕逼大战",
             "replies": 95,
-            "member": {
-                "id": 979,
-                "username": "greatghoul"
-            },
+            "last_reply_by": "greatghoul",
             "node": {
                 "id": 148,
                 "name": "pointless",
@@ -387,10 +357,7 @@ func mockQnaTopics() string {
             "id": 550812,
             "title": "你们的启蒙编程语言是？",
             "replies": 456,
-            "member": {
-                "id": 317258,
-                "username": "szzhiyang"
-            },
+            "last_reply_by": "szzhiyang",
             "node": {
                 "id": 300,
                 "name": "programmer",
@@ -403,10 +370,7 @@ func mockQnaTopics() string {
             "id": 550681,
             "title": "前端萌新正在做的中国风 React 组件库...",
             "replies": 97,
-            "member": {
-                "id": 321579,
-                "username": "AddOneG"
-            },
+            "last_reply_by": "AddOneG",
             "node": {
                 "id": 17,
                 "name": "create",
@@ -419,10 +383,7 @@ func mockQnaTopics() string {
             "id": 567774,
             "title": "如果有云电脑这种东西 你们会使用吗",
             "replies": 115,
-            "member": {
-                "id": 382000,
-                "username": "titadida"
-            },
+            "last_reply_by": "titadida",
             "node": {
                 "id": 519,
                 "name": "ideas",
@@ -435,10 +396,7 @@ func mockQnaTopics() string {
             "id": 695254,
             "title": "大家有没有坚持了很久的观点或者想法，突然发现是自己错了",
             "replies": 151,
-            "member": {
-                "id": 276715,
-                "username": "minglanyu"
-            },
+            "last_reply_by": "minglanyu",
             "node": {
                 "id": 12,
                 "name": "qna",
@@ -451,10 +409,7 @@ func mockQnaTopics() string {
             "id": 585301,
             "title": "假如有一天脑机接口真的实现了，意识可以被存储甚至复制，那么人类是否可以永生？",
             "replies": 133,
-            "member": {
-                "id": 315253,
-                "username": "maxxfire"
-            },
+            "last_reply_by": "maxxfire",
             "node": {
                 "id": 519,
                 "name": "idea",
@@ -467,10 +422,7 @@ func mockQnaTopics() string {
             "id": 574173,
             "title": "让你在家，在办公室，在任何地方听到森林，溪流的声音",
             "replies": 23,
-            "member": {
-                "id": 358742,
-                "username": "bokchoys"
-            },
+            "last_reply_by": "bokchoys",
             "node": {
                 "id": 519,
                 "name": "ideas",
@@ -493,7 +445,8 @@ func mockHotTopics() string {
     "replies": 97,
     "member": {
       "id": 209078,
-      "username": "fundebug"
+      "username": "fundebug",
+	  "pro": 1
     },
     "node": {
       "id": 146,

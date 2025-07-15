@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/glamour/styles"
 	"github.com/muesli/termenv"
-	"github.com/samber/lo"
 	"golang.org/x/term"
 )
 
@@ -21,29 +20,35 @@ func getRenderer(w int) *glamour.TermRenderer {
 
 	once.Do(
 		func() {
-			var conf = ansi.StyleConfig{}
-			if !term.IsTerminal(int(os.Stdout.Fd())) {
-				conf = styles.NoTTYStyleConfig
-			} else {
-				if termenv.HasDarkBackground() {
-					conf = styles.DarkStyleConfig
-				} else {
-					conf = styles.LightStyleConfig
-				}
-			}
-
 			// 主要文字颜色
-			conf.Document.StylePrimitive.Color = lo.ToPtr("#000000")
 			renderer, _ = glamour.NewTermRenderer(
 				glamour.WithBaseURL("https://www.v2ex.com"),
 				glamour.WithEmoji(),
 				glamour.WithWordWrap(w),
-				glamour.WithStyles(conf),
+				glamour.WithStyles(getDefaultStyle()),
 			)
 		},
 	)
 
 	return renderer
+}
+
+func getDefaultStyle() ansi.StyleConfig {
+	var conf = ansi.StyleConfig{}
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		conf = styles.NoTTYStyleConfig
+	} else {
+		if termenv.HasDarkBackground() {
+			conf = styles.DarkStyleConfig
+		} else {
+			conf = styles.LightStyleConfig
+		}
+	}
+
+	// 设置为 nil, 不要用设置文字颜色
+	conf.Document.Color = nil
+
+	return conf
 }
 
 func SafeRenderHtml(input string, w int) string {

@@ -63,7 +63,10 @@ func newDetailPage() detailPage {
 }
 
 func (m detailPage) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		// 清空内容
+		commands.Post(messages.ShowStatusBarTextRequest{FirstText: ""}),
+	)
 }
 
 func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -162,7 +165,9 @@ func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replyPage = msgType.CurrPage
-	var cmds tea.Cmd
+	var (
+		cmds tea.Cmd
+	)
 	if data.Pagination.TotalCount > 0 {
 		cmds = commands.Post(
 			messages.ShowStatusBarTextRequest{
@@ -321,7 +326,7 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 			Width(w).
 			Render(
 				fmt.Sprintf(
-					"V2EX > %s %s\n%s · %s · %d 回复\n\n%s\n\n%s",
+					"V2EX > %s %s\n\n%s · %s · %d 回复\n\n%s\n\n%s",
 					styles.Bold.Render(detail.Node.Title),
 					detail.Url,
 					detail.Member.GetUserNameLabel(me.Id),
@@ -341,7 +346,7 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 	for i, c := range detail.Supplements {
 
 		desc := fmt.Sprintf(
-			"第 %d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
+			"#%d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
 			c.GetContent(w),
 		)
 		content.WriteString(contentTitleStyle.Width(w).Render(desc))
@@ -355,5 +360,5 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 		return m.getReply(detail.Id)
 	}
 
-	return commands.Post(messages.ProxyShowToastRequest{Text: "无评论加载"})
+	return commands.Post(messages.ProxyShowToastRequest{Text: "无评论"})
 }

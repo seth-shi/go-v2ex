@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-type V1TopicResult struct {
+type TopicResult struct {
 	Id          int64          `json:"id"`
 	Title       string         `json:"title"`
 	Replies     int            `json:"replies"`
@@ -14,6 +14,6 @@ type V1TopicResult struct {
 	LastTouched int64          `json:"last_touched"`
 }
 
-func (t V1TopicResult) GetTitle() string {
+func (t TopicResult) GetTitle() string {
 	return strings.ReplaceAll(strings.ReplaceAll(t.Title, "\n", ""), "\r", "")
 }

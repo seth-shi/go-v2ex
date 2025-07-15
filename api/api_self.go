@@ -17,7 +17,7 @@ func (cli *v2exClient) Me(ctx context.Context) tea.Cmd {
 			SetResult(&res).
 			Get("/api/v2/member")
 		if err != nil {
-			return err
+			return errorWrapper("个人信息", err)
 		}
 
 		g.Me.Set(res.Result)

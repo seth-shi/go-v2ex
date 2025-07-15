@@ -3,7 +3,6 @@ module github.com/seth-shi/go-v2ex
 go 1.24.0
 
 require (
-	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.3
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/glamour v0.10.0
@@ -20,18 +19,19 @@ require (
 	github.com/mistakenelf/teacup v0.4.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
+	github.com/muesli/termenv v0.16.0
 	github.com/puzpuzpuz/xsync/v4 v4.1.0
 	github.com/samber/lo v1.50.0
 	github.com/stretchr/testify v1.10.0
 	go.dalton.dog/bubbleup v1.0.0
 	golang.org/x/sync v0.15.0
+	golang.org/x/term v0.32.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	resty.dev/v3 v3.0.0-beta.3
 )
 
 require (
 	aead.dev/minisign v0.2.0 // indirect
-	github.com/JohannesKaufmann/dom v0.2.0 // indirect
 	github.com/STARRY-S/zip v0.2.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/andybalholm/brotli v1.1.2-0.20250424173009-453214e765f3 // indirect
@@ -67,7 +67,6 @@ require (
 	github.com/minio/minlz v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -84,7 +83,6 @@ require (
 	golang.org/x/image v0.20.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
