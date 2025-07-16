@@ -15,5 +15,5 @@ func main() {
 
 	// 初始化到开平页面
 	s := pages.NewUI(appVersion)
-	lo.Must1(tea.NewProgram(s, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run())
+	lo.Must1(tea.NewProgram(s, tea.WithAltScreen()).Run())
 }

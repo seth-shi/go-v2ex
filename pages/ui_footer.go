@@ -49,12 +49,12 @@ func NewFooter(appVersion string) FooterComponents {
 		statusbar.ColorConfig{
 			// 辅助区2
 			Foreground: lipgloss.AdaptiveColor{Dark: "#EEEEEE", Light: "#EEEEEE"},
-			Background: lipgloss.AdaptiveColor{Light: "#A2A2A2", Dark: "#A2A2A2"},
+			Background: lipgloss.AdaptiveColor{Light: "#636e72", Dark: "#636e72"},
 		},
 		statusbar.ColorConfig{
 			// 强调区
 			Foreground: lipgloss.AdaptiveColor{Dark: "#FFFFFF", Light: "#FFFFFF"},
-			Background: lipgloss.AdaptiveColor{Light: "#A2A2A2", Dark: "#A2A2A2"},
+			Background: lipgloss.AdaptiveColor{Light: "#636e72", Dark: "#636e72"},
 		},
 	)
 
