@@ -6,9 +6,9 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/model"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/model"
 )
 
 func LoadConfig() tea.Cmd {

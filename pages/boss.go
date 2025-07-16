@@ -3,7 +3,7 @@ package pages
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/g"
+	"github.com/seth-shi/go-v2ex/v2/g"
 )
 
 type bossPage struct {

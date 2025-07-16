@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/response"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/response"
 )
 
 func (cli *v2exClient) GetDetail(ctx context.Context, id int64) tea.Cmd {

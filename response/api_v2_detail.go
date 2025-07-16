@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 type V2Detail struct {

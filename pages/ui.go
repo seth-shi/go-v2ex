@@ -7,9 +7,9 @@ import (
 	"github.com/kevm/bubbleo/navstack"
 	"github.com/kevm/bubbleo/window"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/commands"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/g"
+	"github.com/seth-shi/go-v2ex/v2/commands"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/g"
 	"go.dalton.dog/bubbleup"
 )
 

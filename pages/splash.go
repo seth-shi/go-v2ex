@@ -4,10 +4,10 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/api"
-	"github.com/seth-shi/go-v2ex/commands"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/api"
+	"github.com/seth-shi/go-v2ex/v2/commands"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 type splashPage struct {
