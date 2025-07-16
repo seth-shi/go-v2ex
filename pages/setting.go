@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/model"
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"

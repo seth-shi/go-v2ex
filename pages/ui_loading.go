@@ -2,8 +2,8 @@ package pages
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
 func loadingView(title string) string {

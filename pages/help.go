@@ -4,9 +4,9 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
 type helpPage struct {

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/response"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/response"
 	"golang.org/x/sync/errgroup"
 	"resty.dev/v3"
 )

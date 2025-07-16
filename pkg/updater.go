@@ -13,7 +13,7 @@ import (
 	base8_bagua "github.com/chyroc/base8-bagua"
 	"github.com/google/go-github/v73/github"
 	"github.com/hashicorp/go-version"
-	"github.com/seth-shi/go-v2ex/consts"
+	"github.com/seth-shi/go-v2ex/v2/consts"
 )
 
 const (

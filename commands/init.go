@@ -2,8 +2,8 @@ package commands
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 func CheckAppHasNewVersion(currVersion string) tea.Cmd {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/response"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/response"
 	"resty.dev/v3"
 )
 
