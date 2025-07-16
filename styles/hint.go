@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Hint = lipgloss.NewStyle().Foreground(lipgloss.Color("#D0D0D0"))
+	Hint = lipgloss.NewStyle().Foreground(lipgloss.Color("#636e72"))
 )
