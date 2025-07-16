@@ -1,7 +1,7 @@
 package messages
 
 import (
-	"github.com/seth-shi/go-v2ex/response"
+	"github.com/seth-shi/go-v2ex/v2/response"
 )
 
 type GetTopicResponse struct {

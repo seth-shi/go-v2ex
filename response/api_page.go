@@ -3,8 +3,8 @@ package response
 import (
 	"fmt"
 
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 type PerTenPageInfo struct {

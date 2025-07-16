@@ -4,8 +4,8 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/response"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/response"
 )
 
 func (cli *v2exClient) Me(ctx context.Context) tea.Cmd {

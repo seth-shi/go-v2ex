@@ -18,9 +18,9 @@ import (
 	"github.com/google/go-github/v73/github"
 	"github.com/mholt/archives"
 	"github.com/minio/selfupdate"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 // 下载进度
