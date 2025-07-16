@@ -13,18 +13,18 @@ import (
 	"github.com/dromara/carbon/v2"
 	"github.com/muesli/reflow/wrap"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/api"
-	"github.com/seth-shi/go-v2ex/commands"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/pkg"
-	"github.com/seth-shi/go-v2ex/response"
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/api"
+	"github.com/seth-shi/go-v2ex/v2/commands"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
+	"github.com/seth-shi/go-v2ex/v2/response"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/messages"
+	"github.com/seth-shi/go-v2ex/v2/messages"
 )
 
 const (

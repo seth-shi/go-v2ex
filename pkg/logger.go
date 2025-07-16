@@ -5,7 +5,7 @@ import (
 	"log"
 	"log/slog"
 
-	"github.com/seth-shi/go-v2ex/model"
+	"github.com/seth-shi/go-v2ex/v2/model"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"resty.dev/v3"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
 type MemberResult struct {

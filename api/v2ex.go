@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/seth-shi/go-v2ex/api/internal/api_topics"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/model"
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/api/internal/api_topics"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 	"resty.dev/v3"
 )
 

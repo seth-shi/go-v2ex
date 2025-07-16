@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/seth-shi/go-v2ex/pkg"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
 type CheckUpgradeAppRequest struct{}

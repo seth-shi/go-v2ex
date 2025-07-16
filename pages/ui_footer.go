@@ -13,13 +13,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mistakenelf/teacup/statusbar"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/api"
-	"github.com/seth-shi/go-v2ex/commands"
-	"github.com/seth-shi/go-v2ex/consts"
-	"github.com/seth-shi/go-v2ex/g"
-	"github.com/seth-shi/go-v2ex/messages"
-	"github.com/seth-shi/go-v2ex/model"
-	"github.com/seth-shi/go-v2ex/styles"
+	"github.com/seth-shi/go-v2ex/v2/api"
+	"github.com/seth-shi/go-v2ex/v2/commands"
+	"github.com/seth-shi/go-v2ex/v2/consts"
+	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
 type FooterComponents struct {

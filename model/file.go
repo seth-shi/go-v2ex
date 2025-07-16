@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/seth-shi/go-v2ex/consts"
+	"github.com/seth-shi/go-v2ex/v2/consts"
 )
 
 const (

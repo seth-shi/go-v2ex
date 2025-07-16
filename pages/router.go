@@ -3,7 +3,7 @@ package pages
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kevm/bubbleo/navstack"
-	"github.com/seth-shi/go-v2ex/commands"
+	"github.com/seth-shi/go-v2ex/v2/commands"
 )
 
 var (

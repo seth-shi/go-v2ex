@@ -17,7 +17,7 @@ import (
 
 	"github.com/eliukblau/pixterm/pkg/ansimage"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/model"
+	"github.com/seth-shi/go-v2ex/v2/model"
 	"resty.dev/v3"
 )
 
