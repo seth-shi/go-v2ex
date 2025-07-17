@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/pkg/browser"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
@@ -84,6 +86,13 @@ func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputs[0].SetValue(msg.Result.Token)
 		m.inputs[1].SetValue(msg.Result.MyNodes)
 	case tea.KeyMsg:
+
+		if key.Matches(msg, consts.AppKeyMap.F1) {
+			return m, func() tea.Msg {
+				return browser.OpenFile(model.ConfigPath())
+			}
+		}
+
 		switch msg.String() {
 		case "tab", "shift+tab", "enter", "up", "down":
 			s := msg.String()

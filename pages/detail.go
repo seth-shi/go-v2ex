@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/dromara/carbon/v2"
 	"github.com/muesli/reflow/wrap"
+	"github.com/pkg/browser"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/api"
 	"github.com/seth-shi/go-v2ex/v2/commands"
@@ -46,6 +47,7 @@ var (
 )
 
 type detailPage struct {
+	url          string
 	viewport     viewport.Model
 	canLoadReply bool
 
@@ -125,6 +127,10 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, commands.Post(
 				messages.GetImageRequest{URL: pkg.ExtractImgURLs(m.content.String())},
 			)
+		case key.Matches(msgType, consts.AppKeyMap.F1):
+			return m, func() tea.Msg {
+				return browser.OpenURL(m.url)
+			}
 		}
 	}
 
@@ -320,6 +326,7 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 		me                = g.Me.Get()
 	)
 	m.opMember = detail.Member
+	m.url = detail.Url
 
 	content.WriteString(
 		contentTitleStyle.

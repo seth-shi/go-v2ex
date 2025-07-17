@@ -126,6 +126,7 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 func (m FooterComponents) onSwitchShowMode() tea.Cmd {
 
 	return func() tea.Msg {
+
 		err := g.Config.Save(
 			func(conf *model.FileConfig) {
 				conf.SwitchShowMode()

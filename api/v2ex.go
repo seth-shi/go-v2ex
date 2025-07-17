@@ -33,7 +33,11 @@ func SetUpHttpClient(conf *model.FileConfig) {
 
 	if conf.IsMockEnv() {
 		// 默认使用 V2 接口
-		g.Session.ChooseApiV2.Store(true)
+		g.Config.Update(
+			func(conf *model.FileConfig) {
+				conf.ChooseAPIV2 = true
+			},
+		)
 		client.SetTransport(&pkg.MockRoundTripper{Mock: mockApiResp})
 	}
 

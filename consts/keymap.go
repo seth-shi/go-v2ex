@@ -20,6 +20,7 @@ type KeyMap struct {
 	SwitchShowMode key.Binding
 	KeyR           key.Binding
 	UpgradeApp     key.Binding
+	F1             key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
@@ -37,7 +38,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.KeyE, k.KeyQ, k.KeyR, k.UpgradeApp}, // first column
-		{k.CtrlQuit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space},                       // second column
+		{k.CtrlQuit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space, k.F1},                 // second column
 	}
 }
 
@@ -108,5 +109,9 @@ var AppKeyMap = KeyMap{
 	UpgradeApp: key.NewBinding(
 		key.WithKeys("ctrl+u"),
 		key.WithHelp("ctrl+u", "更新应用(需要网络可以访问 github)"),
+	),
+	F1: key.NewBinding(
+		key.WithKeys("f1"),
+		key.WithHelp("f1", "打开详情或者打开配置文件"),
 	),
 }

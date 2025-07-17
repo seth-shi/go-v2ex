@@ -16,23 +16,26 @@ const (
 )
 
 type FileConfig struct {
-	Token     string `json:"personal_access_token"`
-	MyNodes   string `json:"my_nodes"`
-	Timeout   uint   `json:"timeout"`
-	ActiveTab int    `json:"active_tab"`
-	ShowMode  int    `json:"show_mode"`
-	Env       string `json:"env"`
+	Token         string `json:"personal_access_token"`
+	MyNodes       string `json:"my_nodes"`
+	Timeout       uint   `json:"timeout"`
+	ActiveTab     int    `json:"active_tab"`
+	ShowMode      int    `json:"show_mode"`
+	Env           string `json:"env"`
+	ChooseAPIV2   bool   `json:"choose_api_v2"`
+	BossModeBlank bool   `json:"boss_mode_blank"`
 }
 
 func NewDefaultFileConfig() *FileConfig {
 	return &FileConfig{
 		// NOTE: 增加默认秘钥, 方便用户快速使用, 用户以后还是要自己配置
-		Token:     "35bbd155-df12-4778-9916-5dd59d967fef",
-		MyNodes:   "share,create,qna,jobs,programmer,career,invest,ideas,hardware",
-		Timeout:   5,
-		ActiveTab: 0,
-		ShowMode:  consts.ShowModeAll,
-		Env:       envProduction,
+		Token:       "35bbd155-df12-4778-9916-5dd59d967fef",
+		MyNodes:     "share,create,qna,jobs,programmer,career,invest,ideas,hardware",
+		Timeout:     5,
+		ActiveTab:   0,
+		ShowMode:    consts.ShowModeAll,
+		Env:         envProduction,
+		ChooseAPIV2: false,
 	}
 }
 

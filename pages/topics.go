@@ -127,14 +127,28 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msgType, consts.AppKeyMap.KeyR):
 			// 切换 V2 接口
-			g.Session.ChooseApiV2.Store(!g.Session.ChooseApiV2.Load())
-			return m, m.getTopics(1)
+			return m, tea.Sequence(
+				m.onSwitchApiMode(),
+				m.getTopics(1),
+			)
 		default:
 			return m, nil
 		}
 	}
 
 	return m, nil
+}
+
+func (m topicPage) onSwitchApiMode() tea.Cmd {
+	return func() tea.Msg {
+		err := g.Config.Save(
+			func(conf *model.FileConfig) {
+				conf.ChooseAPIV2 = !conf.ChooseAPIV2
+			},
+		)
+
+		return messages.ErrorOrToast(err, g.Config.Get().GetShowModeText())
+	}
 }
 
 func (m topicPage) View() string {

@@ -17,7 +17,9 @@ func (cli *v2exClient) GetTopics(
 	return func() tea.Msg {
 
 		var (
-			nodeIndex = g.Config.Get().ActiveTab
+			conf      = g.Config.Get()
+			nodeIndex = conf.ActiveTab
+			chooseV2  = conf.ChooseAPIV2
 			node      = g.GetGroupNode(nodeIndex)
 			res       []response.TopicResult
 			total     int
@@ -25,7 +27,7 @@ func (cli *v2exClient) GetTopics(
 		)
 
 		// 如果是 myNodes, 那么就去用 V2 的接口
-		v2 := node.Key == g.NodesMy || g.Session.ChooseApiV2.Load()
+		v2 := node.Key == g.NodesMy || chooseV2
 		// 最新最热, 只能用 v1
 		if node.Key == g.HotNode || node.Key == g.LatestNode {
 			v2 = false
