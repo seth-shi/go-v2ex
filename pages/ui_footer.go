@@ -114,7 +114,7 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 			cmds = append(cmds, m.onSwitchShowMode())
 		}
 	case messages.UpgradeStateMessage:
-		m.secondText = msg.State.Text()
+		m.statusBar.FirstColumn = msg.State.Text()
 		cmds = append(cmds, tea.Tick(time.Second, commands.CheckDownloadProcessMessages(msg.State)))
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
