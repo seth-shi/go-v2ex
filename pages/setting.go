@@ -71,11 +71,17 @@ func (m settingPage) Init() tea.Cmd {
 	return tea.Batch(
 		textinput.Blink,
 		func() tea.Msg {
+			g.Session.HideFooter.Store(true)
 			return messages.LoadConfigResult{
 				Result: g.Config.Get(),
 			}
 		},
 	)
+}
+
+func (m settingPage) Close() error {
+	g.Session.HideFooter.Store(false)
+	return nil
 }
 
 func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

@@ -65,10 +65,7 @@ func newDetailPage() detailPage {
 }
 
 func (m detailPage) Init() tea.Cmd {
-	return tea.Batch(
-		// 清空内容
-		commands.Post(messages.ShowStatusBarTextRequest{FirstText: ""}),
-	)
+	return nil
 }
 
 func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -79,24 +76,24 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// 显示是否是 pro && 是否有人
 
-	switch msgType := msg.(type) {
+	switch msg := msg.(type) {
 	case messages.GetDetailRequest:
 		// 获取内容 + 第一页的评论
 		var (
 			w, h = g.Window.GetSize()
 		)
-		m.id = msgType.ID
+		m.id = msg.ID
 		m.replyPage = 0
 		m.replyIndex = 0
 		m.canLoadReply = true
 		m.content.Reset()
 		m.imageDataMap = make(map[string]string)
 		m.viewport = viewport.New(w-2, h-lipgloss.Height(m.headerView())-2)
-		return m, m.getDetail(msgType.ID)
+		return m, m.getDetail(msg.ID)
 	case messages.GetDetailResponse:
-		cmds = append(cmds, m.renderDetail(msgType.Data))
+		cmds = append(cmds, m.onDetailResult(msg.Data))
 	case messages.GetReplyResponse:
-		cmds = append(cmds, m.onReplyResult(msgType))
+		cmds = append(cmds, m.onReplyResult(msg))
 		// 图片加载成功
 	case messages.GetImageRequest:
 		if messages.LoadingRequestImage.Loading() {
@@ -104,30 +101,30 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Sequence(
 			messages.LoadingRequestImage.PostStart(),
-			m.requestImages(msgType.URL),
+			m.requestImages(msg.URL),
 			messages.LoadingRequestImage.PostEnd(),
 		)
 	case messages.GetImageResult:
-		cmds = append(cmds, m.onImageLoaded(msgType))
+		cmds = append(cmds, m.onImageLoaded(msg))
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msgType, consts.AppKeyMap.KeyE):
+		case key.Matches(msg, consts.AppKeyMap.KeyE):
 			return m, m.getReply(m.id)
-		case key.Matches(msgType, consts.AppKeyMap.KeyQ):
+		case key.Matches(msg, consts.AppKeyMap.KeyQ):
 			return m, commands.RedirectPop()
-		case key.Matches(msgType, consts.AppKeyMap.Up):
+		case key.Matches(msg, consts.AppKeyMap.Up):
 			msg = tea.KeyMsg{Type: tea.KeyUp}
-		case key.Matches(msgType, consts.AppKeyMap.Down):
+		case key.Matches(msg, consts.AppKeyMap.Down):
 			msg = tea.KeyMsg{Type: tea.KeyDown}
-		case key.Matches(msgType, consts.AppKeyMap.Left):
+		case key.Matches(msg, consts.AppKeyMap.Left):
 			msg = tea.KeyMsg{Type: tea.KeyPgUp}
-		case key.Matches(msgType, consts.AppKeyMap.Right):
+		case key.Matches(msg, consts.AppKeyMap.Right):
 			msg = tea.KeyMsg{Type: tea.KeyPgDown}
-		case key.Matches(msgType, consts.AppKeyMap.KeyR):
+		case key.Matches(msg, consts.AppKeyMap.KeyR):
 			return m, commands.Post(
 				messages.GetImageRequest{URL: pkg.ExtractImgURLs(m.content.String())},
 			)
-		case key.Matches(msgType, consts.AppKeyMap.F1):
+		case key.Matches(msg, consts.AppKeyMap.F1):
 			return m, func() tea.Msg {
 				return browser.OpenURL(m.url)
 			}
@@ -158,11 +155,20 @@ func (m detailPage) headerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func (m detailPage) getDetail(id int64) tea.Cmd {
+func (m *detailPage) getReply(id int64) tea.Cmd {
+
+	if messages.LoadingRequestReply.Loading() {
+		return commands.Post(errors.New("评论请求中"))
+	}
+
+	if !m.canLoadReply {
+		return commands.Post(errors.New("已无更多评论"))
+	}
+
 	return tea.Sequence(
-		messages.LoadingRequestDetail.PostStart(),
-		api.V2ex.GetDetail(context.Background(), id),
-		messages.LoadingRequestDetail.PostEnd(),
+		messages.LoadingRequestReply.PostStart(),
+		api.V2ex.GetReply(context.Background(), id, m.replyPage+1),
+		messages.LoadingRequestReply.PostEnd(),
 	)
 }
 
@@ -171,25 +177,14 @@ func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	data := msgType.Data
 	//  请求之后增加分页, 防止网络失败, 增加了分页
 	m.replyPage = msgType.CurrPage
-	var (
-		cmds tea.Cmd
-	)
-	if data.Pagination.TotalCount > 0 {
-		cmds = commands.Post(
-			messages.ShowStatusBarTextRequest{
-				FirstText: data.Pagination.ToString(m.replyPage),
-				HelpText:  detailKeyHelp,
-			},
-		)
-	}
-
 	if m.replyPage >= data.Pagination.TotalPages {
 		m.canLoadReply = false
 	}
 
 	var (
-		w, _    = g.Window.GetSize()
-		replies strings.Builder
+		pageInfo = data.Pagination.ToString(m.replyPage)
+		w, _     = g.Window.GetSize()
+		replies  strings.Builder
 		// 第一页评论展示顶部
 		// 最后一页展示底部边框
 		boxStyle = styles.
@@ -234,7 +229,7 @@ func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
 	// 这里处理图片替换
 	m.content.WriteString(boxStyle.Width(w).Render(replies.String()))
 	m.refreshViewContent()
-	return cmds
+	return m.showStatusBarText(pageInfo)
 }
 
 func (m *detailPage) refreshViewContent() {
@@ -268,22 +263,6 @@ func (m *detailPage) refreshViewContent() {
 
 	m.viewport.SetContent(m.content.String())
 }
-func (m *detailPage) getReply(id int64) tea.Cmd {
-
-	if messages.LoadingRequestReply.Loading() {
-		return commands.Post(errors.New("评论请求中"))
-	}
-
-	if !m.canLoadReply {
-		return commands.Post(errors.New("已无更多评论"))
-	}
-
-	return tea.Sequence(
-		messages.LoadingRequestReply.PostStart(),
-		api.V2ex.GetReply(context.Background(), id, m.replyPage+1),
-		messages.LoadingRequestReply.PostEnd(),
-	)
-}
 
 func (m *detailPage) requestImages(urls []string) tea.Cmd {
 
@@ -315,7 +294,14 @@ func (m *detailPage) onImageLoaded(result messages.GetImageResult) tea.Cmd {
 	return nil
 }
 
-func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
+func (m detailPage) getDetail(id int64) tea.Cmd {
+	return tea.Sequence(
+		messages.LoadingRequestDetail.PostStart(),
+		api.V2ex.GetDetail(context.Background(), id),
+		messages.LoadingRequestDetail.PostEnd(),
+	)
+}
+func (m *detailPage) onDetailResult(detail response.V2DetailResult) tea.Cmd {
 
 	var (
 		w, _              = g.Window.GetSize()
@@ -367,5 +353,10 @@ func (m *detailPage) renderDetail(detail response.V2DetailResult) tea.Cmd {
 		return m.getReply(detail.Id)
 	}
 
-	return commands.Post(messages.ProxyShowToastRequest{Text: "无评论"})
+	m.canLoadReply = false
+	return m.showStatusBarText("0 回复")
+}
+
+func (m detailPage) showStatusBarText(firstText string) tea.Cmd {
+	return commands.Post(messages.ShowStatusBarTextRequest{FirstText: firstText, HelpText: detailKeyHelp})
 }
