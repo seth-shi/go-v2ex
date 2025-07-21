@@ -61,7 +61,6 @@ func (c *FileConfig) GetShowModeText() string {
 	var (
 		m = map[int]string{
 			consts.ShowModeAll:       "显示所有",
-			consts.ShowModeHideHelp:  "隐藏帮助",
 			consts.ShowModeHideLimit: "隐藏请求限制",
 			consts.ShowModeHideAll:   "隐藏所有",
 		}

@@ -23,22 +23,24 @@ type KeyMap struct {
 	F1             key.Binding
 }
 
-// ShortHelp returns keybindings to be shown in the mini help view. It's part
-// of the key.Map interface.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{
-		k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.KeyE, // first column
-		k.HelpPage, k.SettingPage, k.CtrlQuit, // second column
-		k.SwitchShowMode,
-	}
+	return []key.Binding{}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
 // key.Map interface.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right, k.Tab, k.ShiftTab, k.KeyE, k.KeyQ, k.KeyR, k.UpgradeApp}, // first column
-		{k.CtrlQuit, k.HelpPage, k.SettingPage, k.SwitchShowMode, k.Space, k.F1},                 // second column
+		{
+			k.Up, k.Down, k.Left, k.Right,
+			k.Tab, k.ShiftTab,
+			k.KeyE, k.KeyQ, k.KeyR,
+		}, // first column
+		{
+			k.CtrlQuit, k.HelpPage, k.SettingPage,
+			k.UpgradeApp,
+			k.SwitchShowMode, k.Space, k.F1,
+		}, // second column
 	}
 }
 
@@ -52,11 +54,11 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 var AppKeyMap = KeyMap{
 	Up: key.NewBinding(
 		key.WithKeys("w", "up", "k"),
-		key.WithHelp("w/↑", "[主题页]移动到上一个"),
+		key.WithHelp("w/↑", "[主题页]列表上一个"),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("s", "down", "j"),
-		key.WithHelp("s/↓", "[主题页]列表移动到下一个"),
+		key.WithHelp("s/↓", "[主题页]列表下一个"),
 	),
 	Left: key.NewBinding(
 		key.WithKeys("a", "left", "h"),
@@ -80,15 +82,15 @@ var AppKeyMap = KeyMap{
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "[主题页]切换下一个节点"),
+		key.WithHelp("tab", "[主题页]下一个节点"),
 	),
 	Space: key.NewBinding(
 		key.WithKeys(" "),
-		key.WithHelp("空格键", "老板键"),
+		key.WithHelp("空格", "老板键"),
 	),
 	ShiftTab: key.NewBinding(
 		key.WithKeys("shift+tab"),
-		key.WithHelp("shift+tab", "[主题页]切换上一个切点"),
+		key.WithHelp("shift+tab", "[主题页]上一个切点"),
 	),
 	CtrlQuit: key.NewBinding(
 		key.WithKeys("esc", "ctrl+c"),
@@ -96,15 +98,15 @@ var AppKeyMap = KeyMap{
 	),
 	KeyE: key.NewBinding(
 		key.WithKeys("e", "enter", "o"),
-		key.WithHelp("e/enter", "[主题页]查看主题详情"),
+		key.WithHelp("e/enter", "[主题页]查看主题详情 / [详情页]加载评论"),
 	),
 	SwitchShowMode: key.NewBinding(
 		key.WithKeys("="),
-		key.WithHelp("=", "[减号]切换底部显示隐藏"),
+		key.WithHelp("=", "[等于号]切换底部显示隐藏"),
 	),
 	KeyR: key.NewBinding(
 		key.WithKeys("r"),
-		key.WithHelp("r", "加载图片"),
+		key.WithHelp("r", "[主题页]切换接口版本 / [详情页]加载图片"),
 	),
 	UpgradeApp: key.NewBinding(
 		key.WithKeys("ctrl+u"),
@@ -112,6 +114,6 @@ var AppKeyMap = KeyMap{
 	),
 	F1: key.NewBinding(
 		key.WithKeys("f1"),
-		key.WithHelp("f1", "打开详情或者打开配置文件"),
+		key.WithHelp("f1", "[详情页]打开链接 / [配置页]打开配置文件"),
 	),
 }

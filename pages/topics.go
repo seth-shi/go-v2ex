@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 
@@ -26,8 +25,6 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/dromara/carbon/v2"
 )
-
-const keyHelp = "[a/d:翻页 w/s:移动 e:详情 tab/shift+tab:节点 空格:老板键 ?:帮助页 `:设置页  =:显示页脚]"
 
 var (
 	cellStyle         = styles.Primary.Padding(0, 1).Width(5)
@@ -146,8 +143,7 @@ func (m topicPage) onSwitchApiMode() tea.Cmd {
 				conf.ChooseAPIV2 = !conf.ChooseAPIV2
 			},
 		)
-
-		return messages.ErrorOrToast(err, g.Config.Get().GetShowModeText())
+		return messages.ErrorOrToast(err, "切换成功: V1 接口信息更多 / V2 接口有分页")
 	}
 }
 
@@ -171,7 +167,6 @@ func (m topicPage) moveTabs(add int) (tea.Model, tea.Cmd) {
 	saveTabFn := func() tea.Msg {
 		return g.Config.Save(
 			func(conf *model.FileConfig) {
-				slog.Info("save index")
 				conf.ActiveTab = g.TabNodeIndex(conf.ActiveTab, add)
 			},
 		)
@@ -206,7 +201,6 @@ func (m topicPage) onTopicResult(msgType messages.GetTopicResponse) (tea.Model, 
 	return m, commands.Post(
 		messages.ShowStatusBarTextRequest{
 			FirstText: fmt.Sprintf("%s %s", apiText, pageInfo.ToString()),
-			HelpText:  keyHelp,
 		},
 	)
 }

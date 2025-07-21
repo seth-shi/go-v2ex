@@ -28,10 +28,6 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/messages"
 )
 
-const (
-	detailKeyHelp = "[q:返回 e:加载评论 r:加载图片 w/s/鼠标:滑动 a/d:翻页 =:显示页脚]"
-)
-
 var (
 	titleStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
@@ -358,5 +354,5 @@ func (m *detailPage) onDetailResult(detail response.V2DetailResult) tea.Cmd {
 }
 
 func (m detailPage) showStatusBarText(firstText string) tea.Cmd {
-	return commands.Post(messages.ShowStatusBarTextRequest{FirstText: firstText, HelpText: detailKeyHelp})
+	return commands.Post(messages.ShowStatusBarTextRequest{FirstText: firstText})
 }

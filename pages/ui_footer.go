@@ -54,14 +54,14 @@ func NewFooter(appVersion string) FooterComponents {
 		statusbar.ColorConfig{
 			// 强调区
 			Foreground: lipgloss.AdaptiveColor{Dark: "#FFFFFF", Light: "#FFFFFF"},
-			Background: lipgloss.AdaptiveColor{Light: "#636e72", Dark: "#636e72"},
+			Background: lipgloss.AdaptiveColor{Light: "#005FB8", Dark: "#005FB8"},
 		},
 	)
 
 	sb.SetContent(
 		"",
 		"",
-		"",
+		"?查看帮助",
 		fmt.Sprintf("%s[%s]@%s", consts.AppName, appVersion, consts.AppOwner),
 	)
 
@@ -147,7 +147,7 @@ func (m FooterComponents) View() string {
 		conf       = g.Config.Get()
 		content    strings.Builder
 		w, _       = g.Window.GetSize()
-		secondText = m.GetSecondColumnContent(conf.ShowHelp())
+		secondText = m.GetSecondColumnContent()
 	)
 
 	if !conf.ShowFooter() {
@@ -171,13 +171,12 @@ func (m FooterComponents) View() string {
 
 }
 
-func (m FooterComponents) GetSecondColumnContent(showHelp bool) string {
+func (m FooterComponents) GetSecondColumnContent() string {
 	// loadings 是一个 map
 	var (
 		loadingKeys = lo.Keys(m.loadings)
 		loadingIcon = m.spinner.View()
 		loadingText strings.Builder
-		secondText  string
 	)
 	slices.Sort(loadingKeys)
 
@@ -190,9 +189,5 @@ func (m FooterComponents) GetSecondColumnContent(showHelp bool) string {
 		},
 	)
 
-	if showHelp {
-		secondText = m.secondText
-	}
-
-	return styles.Hint.Render(loadingText.String(), secondText)
+	return styles.Hint.Render(loadingText.String(), m.secondText)
 }

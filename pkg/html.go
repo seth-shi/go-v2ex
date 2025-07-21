@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/glamour/styles"
-	"github.com/muesli/termenv"
+	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 )
 
@@ -38,7 +38,7 @@ func getDefaultStyle() ansi.StyleConfig {
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		conf = styles.NoTTYStyleConfig
 	} else {
-		if termenv.HasDarkBackground() {
+		if lipgloss.HasDarkBackground() {
 			conf = styles.DarkStyleConfig
 		} else {
 			conf = styles.LightStyleConfig
