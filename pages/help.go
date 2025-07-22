@@ -2,10 +2,8 @@ package pages
 
 import (
 	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/styles"
@@ -43,13 +41,11 @@ func (m helpPage) Close() error {
 
 func (m helpPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, consts.AppKeyMap.KeyQ):
-			return m, commands.RedirectPop()
-		}
-	}
+	// switch msg := msg.(type) {
+	// case tea.KeyMsg:
+	// 	switch {
+	// 	}
+	// }
 
 	return m, nil
 }

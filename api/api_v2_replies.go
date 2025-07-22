@@ -22,9 +22,9 @@ func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.Cmd
 			return errorWrapper("回复", err)
 		}
 
+		res.Pagination.CurrPage = page
 		return messages.GetReplyResponse{
-			Data:     res,
-			CurrPage: page,
+			Data: res,
 		}
 	}
 }

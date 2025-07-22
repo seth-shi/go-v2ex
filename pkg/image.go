@@ -85,7 +85,7 @@ type imgRes struct {
 	err  error
 }
 
-func ProcessURLs(urls []string, width int) map[string]string {
+func DownloadImageURL(urls []string, width int) map[string]string {
 	// 处理每个URL
 	var (
 		wg          sync.WaitGroup

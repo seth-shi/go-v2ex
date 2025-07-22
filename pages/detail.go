@@ -1,12 +1,11 @@
 package pages
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
+	"path"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -43,21 +42,20 @@ var (
 )
 
 type detailPage struct {
-	url          string
-	viewport     viewport.Model
-	canLoadReply bool
+	id        int64
+	viewport  viewport.Model
+	decodeMap map[string]string
 
-	content      bytes.Buffer
-	imageDataMap map[string]string
-
-	id         int64
-	replyPage  int
-	replyIndex int
-	opMember   response.MemberResult
+	replyPageInfo response.V2PageResponse
+	contentDetail response.V2DetailResult
+	contentReply  []response.V2ReplyResult
 }
 
 func newDetailPage() detailPage {
-	return detailPage{}
+	return detailPage{
+		decodeMap: make(map[string]string),
+		viewport:  viewport.New(40, 40),
+	}
 }
 
 func (m detailPage) Init() tea.Cmd {
@@ -79,50 +77,38 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			w, h = g.Window.GetSize()
 		)
 		m.id = msg.ID
-		m.replyPage = 0
-		m.replyIndex = 0
-		m.canLoadReply = true
-		m.content.Reset()
-		m.imageDataMap = make(map[string]string)
-		m.viewport = viewport.New(w-2, h-lipgloss.Height(m.headerView())-2)
-		return m, m.getDetail(msg.ID)
+		m.viewport.Width = w
+		m.viewport.Height = h
+		// 重新修改键盘映射
+		m.viewport.KeyMap.Up = consts.AppKeyMap.Up
+		m.viewport.KeyMap.Down = consts.AppKeyMap.Down
+		m.viewport.KeyMap.Left = consts.AppKeyMap.Left
+		m.viewport.KeyMap.Right = consts.AppKeyMap.Right
+		return m, tea.Batch(m.getDetail(), m.getReply())
 	case messages.GetDetailResponse:
-		cmds = append(cmds, m.onDetailResult(msg.Data))
+		m.contentDetail = msg.Data
+		cmds = append(cmds, m.renderContent())
 	case messages.GetReplyResponse:
-		cmds = append(cmds, m.onReplyResult(msg))
-		// 图片加载成功
-	case messages.GetImageRequest:
-		if messages.LoadingRequestImage.Loading() {
-			return m, commands.Post(errors.New("请求图片中"))
-		}
-		return m, tea.Sequence(
-			messages.LoadingRequestImage.PostStart(),
-			m.requestImages(msg.URL),
-			messages.LoadingRequestImage.PostEnd(),
-		)
-	case messages.GetImageResult:
-		cmds = append(cmds, m.onImageLoaded(msg))
+		m.replyPageInfo = msg.Data.Pagination
+		m.contentReply = append(m.contentReply, msg.Data.Result...)
+		cmds = append(cmds, m.renderContent())
+	case messages.DecodeDetailContentResult:
+		m.decodeMap = lo.Assign(m.decodeMap, msg.Result)
+		cmds = append(cmds, m.renderContent())
+	case messages.RenderDetailContentResult:
+		m.viewport.SetContent(msg.Content)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, consts.AppKeyMap.KeyE):
-			return m, m.getReply(m.id)
-		case key.Matches(msg, consts.AppKeyMap.KeyQ):
-			return m, commands.RedirectPop()
-		case key.Matches(msg, consts.AppKeyMap.Up):
-			msg = tea.KeyMsg{Type: tea.KeyUp}
-		case key.Matches(msg, consts.AppKeyMap.Down):
-			msg = tea.KeyMsg{Type: tea.KeyDown}
-		case key.Matches(msg, consts.AppKeyMap.Left):
-			msg = tea.KeyMsg{Type: tea.KeyPgUp}
-		case key.Matches(msg, consts.AppKeyMap.Right):
-			msg = tea.KeyMsg{Type: tea.KeyPgDown}
+			if m.replyPageInfo.CurrPage >= m.replyPageInfo.TotalPages {
+				return m, commands.Post(errors.New("已无更多评论"))
+			}
+			return m, m.getReply()
 		case key.Matches(msg, consts.AppKeyMap.KeyR):
-			return m, commands.Post(
-				messages.GetImageRequest{URL: pkg.ExtractImgURLs(m.content.String())},
-			)
+			return m.decodeContent()
 		case key.Matches(msg, consts.AppKeyMap.F1):
 			return m, func() tea.Msg {
-				return browser.OpenURL(m.url)
+				return browser.OpenURL(m.contentDetail.Url)
 			}
 		}
 	}
@@ -133,17 +119,12 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m detailPage) View() string {
-
-	if m.content.Len() == 0 {
-		return loadingView("正在加载内容...")
-	}
-
 	return fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View())
 }
 
 func (m detailPage) headerView() string {
 	var p = 0.0
-	if m.content.Len() > 0 {
+	if m.contentDetail.Id > 0 {
 		p = m.viewport.ScrollPercent() * 100
 	}
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", p))
@@ -151,208 +132,170 @@ func (m detailPage) headerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func (m *detailPage) getReply(id int64) tea.Cmd {
-
-	if messages.LoadingRequestReply.Loading() {
-		return commands.Post(errors.New("评论请求中"))
-	}
-
-	if !m.canLoadReply {
-		return commands.Post(errors.New("已无更多评论"))
-	}
-
-	return tea.Sequence(
-		messages.LoadingRequestReply.PostStart(),
-		api.V2ex.GetReply(context.Background(), id, m.replyPage+1),
-		messages.LoadingRequestReply.PostEnd(),
-	)
+func (m detailPage) getReply() tea.Cmd {
+	// 默认第 0 页
+	page := m.replyPageInfo.CurrPage + 1
+	return commands.
+		LoadingRequestReply.
+		Run(api.V2ex.GetReply(context.Background(), m.id, page))
 }
 
-func (m *detailPage) onReplyResult(msgType messages.GetReplyResponse) tea.Cmd {
+func (m detailPage) renderContent() tea.Cmd {
 
-	data := msgType.Data
-	//  请求之后增加分页, 防止网络失败, 增加了分页
-	m.replyPage = msgType.CurrPage
-	if m.replyPage >= data.Pagination.TotalPages {
-		m.canLoadReply = false
-	}
-
+	return tea.Batch(
+		func() tea.Msg {
+			return messages.RenderDetailContentResult{Content: m.buildContent()}
+		},
+		commands.Post(messages.ShowStatusBarTextRequest{FirstText: m.replyPageInfo.ToString("0 评论")}),
+	)
+}
+func (m detailPage) buildContent() string {
 	var (
-		pageInfo = data.Pagination.ToString(m.replyPage)
-		w, _     = g.Window.GetSize()
-		replies  strings.Builder
+		w, _              = g.Window.GetSize()
+		content           strings.Builder
+		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
 		// 第一页评论展示顶部
 		// 最后一页展示底部边框
 		boxStyle = styles.
 				Style.
-				BorderTop(msgType.CurrPage == 1).
-				BorderBottom(msgType.CurrPage == data.Pagination.TotalPages)
+				BorderTop(true).
+				BorderBottom(true)
 		replyTitleStyle = styles.
 				Border.
 				Width(w - 2).
 				BorderRight(false).
 				BorderBottom(false)
-		me = g.Me.Get()
+		me          = g.Me.Get()
+		decodeItems []string
 	)
-
-	replies.WriteString("\n")
-
-	for _, r := range data.Result {
-		m.replyIndex++
-
-		var (
-			opText string
-		)
-
-		if r.Member.Id == m.opMember.Id {
-			opText = styles.MemberOp
-		}
-
-		floor := fmt.Sprintf(
-			"#%d · %s @%s%s",
-			m.replyIndex,
-			carbon.CreateFromTimestamp(r.Created),
-			r.Member.GetUserNameLabel(me.Id),
-			opText,
-		)
-
-		replies.WriteString(replyTitleStyle.Render(floor))
-		replies.WriteString("\n")
-		replies.WriteString(r.GetContent(w))
-		replies.WriteString("\n")
+	for k, v := range m.decodeMap {
+		decodeItems = append(decodeItems, k, v)
 	}
 
-	// 这里处理图片替换
-	m.content.WriteString(boxStyle.Width(w).Render(replies.String()))
-	m.refreshViewContent()
-	return m.showStatusBarText(pageInfo)
-}
-
-func (m *detailPage) refreshViewContent() {
-
-	var (
-		imageStyle = styles.
-			Border.
-			BorderLeft(true).
-			BorderRight(false).
-			BorderTop(false).
-			BorderBottom(false).
-			PaddingLeft(1)
-	)
-
-	if len(m.imageDataMap) > 0 {
-		var items []string
-		var index int
-		for k, v := range m.imageDataMap {
-			index++
-
-			var imageData strings.Builder
-			imageData.WriteString(fmt.Sprintf("图片#%d", index))
-			imageData.WriteString("\n")
-			imageData.WriteString(v)
-			items = append(items, k, fmt.Sprintf("\n%s", imageStyle.Render(imageData.String())))
+	decodeFn := func(t string) string {
+		if len(decodeItems) == 0 {
+			return t
 		}
-		replacer := strings.NewReplacer(items...)
-		m.viewport.SetContent(replacer.Replace(m.content.String()))
-		return
+
+		return strings.NewReplacer(decodeItems...).Replace(t)
 	}
 
-	m.viewport.SetContent(m.content.String())
-}
-
-func (m *detailPage) requestImages(urls []string) tea.Cmd {
-
-	return func() tea.Msg {
-
-		if len(urls) == 0 {
-			return errors.New("当前页面无图片")
-		}
-
-		// 只去下载图片里没有的
-		keys := lo.Keys(m.imageDataMap)
-		diffUrl := lo.Without(urls, keys...)
-
-		slog.Info("下载图片", slog.Int("count", len(diffUrl)))
-
-		var (
-			w, _ = g.Window.GetSize()
-		)
-
-		width := (w * 9) / 10
-		return messages.GetImageResult{
-			Result: pkg.ProcessURLs(diffUrl, width),
-		}
-	}
-}
-func (m *detailPage) onImageLoaded(result messages.GetImageResult) tea.Cmd {
-	m.imageDataMap = lo.Assign(m.imageDataMap, result.Result)
-	m.refreshViewContent()
-	return nil
-}
-
-func (m detailPage) getDetail(id int64) tea.Cmd {
-	return tea.Sequence(
-		messages.LoadingRequestDetail.PostStart(),
-		api.V2ex.GetDetail(context.Background(), id),
-		messages.LoadingRequestDetail.PostEnd(),
-	)
-}
-func (m *detailPage) onDetailResult(detail response.V2DetailResult) tea.Cmd {
-
-	var (
-		w, _              = g.Window.GetSize()
-		contentWidth      = w - 2
-		content           strings.Builder
-		topicContent      = detail.GetContent(w)
-		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
-		me                = g.Me.Get()
-	)
-	m.opMember = detail.Member
-	m.url = detail.Url
-
+	// //////////////////////////////////////
+	// 主题内容渲染
 	content.WriteString(
 		contentTitleStyle.
 			Width(w).
 			Render(
 				fmt.Sprintf(
 					"V2EX > %s %s\n\n%s · %s · %d 回复\n\n%s\n\n%s",
-					styles.Bold.Render(detail.Node.Title),
-					detail.Url,
-					detail.Member.GetUserNameLabel(me.Id),
-					carbon.CreateFromTimestamp(detail.Created),
-					detail.Replies,
+					styles.Bold.Render(m.contentDetail.Node.Title),
+					m.contentDetail.Url,
+					m.contentDetail.Member.GetUserNameLabel(me.Id),
+					carbon.CreateFromTimestamp(m.contentDetail.Created),
+					m.contentDetail.Replies,
 					lipgloss.NewStyle().
 						Bold(true).
 						Border(lipgloss.RoundedBorder(), false, false, true, false).
-						Render(detail.Title),
-					wrap.String(topicContent, contentWidth),
+						Render(m.contentDetail.Title),
+					wrap.String(decodeFn(m.contentDetail.GetContent(w)), w-2),
 				),
 			),
 	)
 	content.WriteString("\n\n")
 
+	// //////////////////////////////////////
 	// 附言
-	for i, c := range detail.Supplements {
+	for i, c := range m.contentDetail.Supplements {
 
 		desc := fmt.Sprintf(
 			"#%d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
-			c.GetContent(w),
+			decodeFn(c.GetContent(w)),
 		)
 		content.WriteString(contentTitleStyle.Width(w).Render(desc))
 	}
 
-	// 构建内容
-	m.content.WriteString(content.String())
-	m.refreshViewContent()
-	// 如果有评论去加载评论
-	if detail.Replies > 0 {
-		return m.getReply(detail.Id)
-	}
+	content.WriteString("\n")
+	// //////////////////////////////////////
+	// 评论的渲染列表
+	var replyContent strings.Builder
+	for i, r := range m.contentReply {
+		var (
+			// 是否是楼主
+			opText = lo.If(r.Member.Id == m.contentDetail.Member.Id, styles.MemberOp).Else("")
+		)
 
-	m.canLoadReply = false
-	return m.showStatusBarText("0 回复")
+		floor := fmt.Sprintf(
+			"#%d · %s @%s%s",
+			i,
+			carbon.CreateFromTimestamp(r.Created),
+			r.Member.GetUserNameLabel(me.Id),
+			opText,
+		)
+		replyContent.WriteString(replyTitleStyle.Render(floor))
+		replyContent.WriteString("\n")
+		replyContent.WriteString(decodeFn(r.GetContent(w)))
+		replyContent.WriteString("\n")
+	}
+	content.WriteString(boxStyle.Width(w).Render(replyContent.String()))
+	return content.String()
 }
 
-func (m detailPage) showStatusBarText(firstText string) tea.Cmd {
-	return commands.Post(messages.ShowStatusBarTextRequest{FirstText: firstText})
+func (m detailPage) getDetail() tea.Cmd {
+	return commands.
+		LoadingRequestDetail.
+		Run(api.V2ex.GetDetail(context.Background(), m.id))
+}
+
+func (m detailPage) decodeContent() (tea.Model, tea.Cmd) {
+
+	// 两种方式接码
+	cmd := commands.
+		LoadingDecodeContent.
+		Run(
+			func() tea.Msg {
+
+				var (
+					content    = m.buildContent()
+					w, _       = g.Window.GetSize()
+					keys       = lo.Keys(m.decodeMap)
+					urls       = pkg.ExtractImgURLs(content)
+					diffUrl    = lo.Without(urls, keys...)
+					width      = (w * 9) / 10
+					replaceMap = make(map[string]string)
+					imageStyle = styles.
+							Border.
+							BorderLeft(true).
+							BorderRight(false).
+							BorderTop(false).
+							BorderBottom(false).
+							PaddingLeft(1)
+					tagStyle = styles.Active.Bold(true).Underline(true)
+				)
+
+				for k, v := range pkg.DownloadImageURL(diffUrl, width) {
+					// 图片显示的格式: xxx => 换行: 替换#1 换行 图片
+					index := path.Base(k)
+					var imageData strings.Builder
+					imageData.WriteString(tagStyle.Render(fmt.Sprintf("图片解码 #%s", index)))
+					imageData.WriteString("\n")
+					imageData.WriteString(v)
+					replaceMap[k] = fmt.Sprintf("\n%s", imageStyle.Render(imageData.String()))
+				}
+
+				index := 0
+				for k, v := range pkg.DetectBase64(content) {
+					index++
+					replaceMap[k] = tagStyle.Render(fmt.Sprintf("base64解码#%d %s", index, v))
+				}
+
+				if len(replaceMap) == 0 {
+					return errors.New("无数据需要解码")
+				}
+
+				return messages.DecodeDetailContentResult{
+					Result: replaceMap,
+				}
+			},
+		)
+	return m, cmd
 }
