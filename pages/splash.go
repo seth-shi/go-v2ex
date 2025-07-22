@@ -36,6 +36,7 @@ func (m splashPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, tea.Cmd) {
 
+	// 初始化日志, HTTP 请求
 	conf := msg.Result
 	pkg.SetupLogger(conf)
 	api.SetUpHttpClient(conf)
@@ -62,17 +63,9 @@ func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, te
 	cmds = append(
 		cmds,
 		// 获取 token 过期信息
-		tea.Sequence(
-			messages.LoadingGetToken.PostStart(),
-			api.V2ex.GetToken(context.Background()),
-			messages.LoadingGetToken.PostEnd(),
-		),
+		commands.LoadingGetToken.Run(api.V2ex.GetToken(context.Background())),
 		// 获取个人信息
-		tea.Sequence(
-			messages.LoadingMe.PostStart(),
-			api.V2ex.Me(context.Background()),
-			messages.LoadingMe.PostEnd(),
-		),
+		commands.LoadingMe.Run(api.V2ex.Me(context.Background())),
 		// 先跳转到主题页
 		commands.Redirect(RouteTopic),
 	)

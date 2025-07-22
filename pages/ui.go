@@ -63,6 +63,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, redirectIfSamePop(m.navigator.Top(), RouteHelp))
 		case key.Matches(msg, consts.AppKeyMap.SettingPage):
 			cmds = append(cmds, redirectIfSamePop(m.navigator.Top(), RouteSetting))
+		case key.Matches(msg, consts.AppKeyMap.KeyQ):
+			return m, commands.RedirectPop()
 		case key.Matches(msg, consts.AppKeyMap.CtrlQuit):
 			return m, tea.Quit
 		}

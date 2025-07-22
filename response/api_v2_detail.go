@@ -35,7 +35,7 @@ type SupplementResult struct {
 	renderContent string
 }
 
-func (r V2DetailResult) GetContent(w int) string {
+func (r *V2DetailResult) GetContent(w int) string {
 
 	if r.renderContent == "" {
 		var content = r.Content
@@ -53,7 +53,7 @@ func (r V2DetailResult) GetContent(w int) string {
 	return r.renderContent
 }
 
-func (r SupplementResult) GetContent(w int) string {
+func (r *SupplementResult) GetContent(w int) string {
 	if r.renderContent == "" {
 		var content = r.Content
 		// 如果是链接出现多次, 那么只保留一次

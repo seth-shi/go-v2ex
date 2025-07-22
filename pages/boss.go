@@ -65,8 +65,6 @@ func (m bossPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, consts.AppKeyMap.KeyQ):
-			return m, commands.RedirectPop()
 		case key.Matches(msg, consts.AppKeyMap.F1):
 			return m, func() tea.Msg {
 				return g.Config.Save(

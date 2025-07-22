@@ -212,6 +212,7 @@ func (api *V2TopicApi) requestV2Topics(
 	// 如果返回了最大页数, 那么返回给前端, 方便后续缓存获取
 	api.cursorPageState.Store(nodeKey, apiPage)
 	// 存储分页信息
+	v2Res.Pagination.CurrPage = apiPage
 	api.nodePageInfoState.Store(nodeKey, v2Res.Pagination)
 
 	res := &v2Resp{

@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -57,11 +56,7 @@ func (m topicPage) Init() tea.Cmd {
 }
 
 func (m topicPage) getTopics(page int) tea.Cmd {
-	return tea.Sequence(
-		messages.LoadingRequestTopics.PostStart(),
-		api.V2ex.GetTopics(context.Background(), page),
-		messages.LoadingRequestTopics.PostEnd(),
-	)
+	return commands.LoadingRequestTopics.Run(api.V2ex.GetTopics(context.Background(), page))
 }
 
 func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -70,11 +65,6 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.GetTopicResponse:
 		return m.onTopicResult(msgType)
 	case tea.KeyMsg:
-		// 如果在请求中, 不处理键盘事件
-		if messages.LoadingRequestTopics.Loading() {
-			return m, commands.Post(errors.New("请求中"))
-		}
-
 		switch {
 		case key.Matches(msgType, consts.AppKeyMap.Tab):
 			return m.moveTabs(1)

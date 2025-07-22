@@ -13,14 +13,13 @@ type GetDetailResponse struct {
 }
 
 type GetReplyResponse struct {
-	Data     response.V2ReplyResponse
-	CurrPage int
+	Data response.V2ReplyResponse
 }
 
-type GetImageRequest struct {
-	URL []string
-}
-
-type GetImageResult struct {
+type DecodeDetailContentResult struct {
 	Result map[string]string
+}
+
+type RenderDetailContentResult struct {
+	Content string
 }
