@@ -9,15 +9,14 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/v2/api"
 	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/messages"
 	"github.com/seth-shi/go-v2ex/v2/model"
 	"github.com/seth-shi/go-v2ex/v2/response"
 	"github.com/seth-shi/go-v2ex/v2/styles"
-
-	"github.com/seth-shi/go-v2ex/v2/api"
-	"github.com/seth-shi/go-v2ex/v2/messages"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -245,8 +244,9 @@ func (m topicPage) renderTables() string {
 	}
 	// 表格
 	var (
-		w, _        = g.Window.GetSize()
-		me          = g.Me.Get()
+		w, _ = g.Window.GetSize()
+		me   = g.Me.Get()
+
 		headers     = []string{"#", "节点", "标题", "OP", "回复数", "时间"}
 		rows        [][]string
 		columnWidth = []int{

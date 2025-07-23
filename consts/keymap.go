@@ -37,21 +37,21 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{
 			k.Up, k.Down, k.Left, k.Right,
 			k.Tab, k.ShiftTab,
-			k.KeyQ, k.KeyE, k.KeyR,
+			k.KeyE, k.KeyR, k.F1,
 		}, // first column
 		{
-			k.CtrlQuit, k.HelpPage, k.SettingPage,
+			k.KeyQ, k.CtrlQuit, k.HelpPage, k.SettingPage,
 			k.UpgradeApp,
-			k.SwitchShowMode, k.Space, k.F1,
+			k.SwitchShowMode, k.Space,
 		}, // second column
 	}
 }
 
 var (
 	topicPageTitle   = styles.Active.Bold(true).Render("[主题页]")
-	allPageTitle     = styles.Active.Underline(true).Render("[任意页]")
+	allPageTitle     = styles.Bold.Underline(true).Render("[任意页]")
 	detailPageTitle  = styles.Err.Bold(true).Render("[详情页]")
-	settingPageTitle = styles.Err.Underline(true).Render("[配置页]")
+	settingPageTitle = styles.Bold.Underline(true).Render("[配置页]")
 )
 
 // AppKeyMap

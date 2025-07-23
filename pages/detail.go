@@ -226,7 +226,7 @@ func (m detailPage) buildContent() string {
 
 		floor := fmt.Sprintf(
 			"#%d · %s @%s%s",
-			i,
+			i+1,
 			carbon.CreateFromTimestamp(r.Created),
 			r.Member.GetUserNameLabel(me.Id),
 			opText,
