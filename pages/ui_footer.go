@@ -3,6 +3,7 @@ package pages
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
 	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
@@ -162,6 +164,15 @@ func (m FooterComponents) View() string {
 		content.WriteString(strings.Repeat("_", max(0, w-borderWidth)))
 		content.WriteString("\n")
 	}
+
+	var name string
+	ref := reflect.TypeOf(nav.CurrentPage())
+	if ref == nil {
+		name = "nil"
+	} else {
+		name = ref.Name()
+	}
+	m.statusBar.ThirdColumn = fmt.Sprintf("%d-%s", len(nav.Histories()), name)
 
 	// 这一列有 loading 动画, 需要实时计算
 	m.statusBar.SecondColumn = secondText

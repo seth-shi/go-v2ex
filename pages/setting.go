@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/pkg/browser"
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
@@ -70,27 +71,29 @@ func newSettingPage() settingPage {
 func (m settingPage) Init() tea.Cmd {
 	return tea.Batch(
 		textinput.Blink,
-		func() tea.Msg {
+	)
+}
 
-			// 屏蔽 Q 返回键盘
-			consts.AppKeyMap.KeyQ.SetEnabled(false)
-			consts.AppKeyMap.UpgradeApp.SetEnabled(false)
+func (m settingPage) OnEntering() (tea.Model, tea.Cmd) {
 
-			g.Session.HideFooter.Store(true)
-			return messages.LoadConfigResult{
-				Result: g.Config.Get(),
-			}
+	// 屏蔽 Q 返回键盘
+	consts.AppKeyMap.KeyQ.SetEnabled(false)
+	consts.AppKeyMap.UpgradeApp.SetEnabled(false)
+	g.Session.HideFooter.Store(true)
+
+	return m, commands.Post(
+		messages.LoadConfigResult{
+			Result: g.Config.Get(),
 		},
 	)
 }
 
-func (m settingPage) Close() error {
+func (m settingPage) OnLeaving() (tea.Model, tea.Cmd) {
 	g.Session.HideFooter.Store(false)
-
 	consts.AppKeyMap.UpgradeApp.SetEnabled(true)
 	consts.AppKeyMap.KeyQ.SetEnabled(true)
 
-	return nil
+	return m, nil
 }
 
 func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

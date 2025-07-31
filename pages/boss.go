@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,10 +14,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/lo/mutable"
 	"github.com/seth-shi/go-v2ex/v2/commands"
-	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
-	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/styles"
 )
 
@@ -33,6 +31,7 @@ var (
 	progressModel = progress.New(
 		progress.WithGradient("#636e72", "#2980b9"),
 	)
+	_ nav.PageLife = bossPage{}
 )
 
 type bossPage struct {
@@ -46,40 +45,26 @@ func newBossPage() bossPage {
 }
 
 func (m bossPage) Init() tea.Cmd {
-	return tea.Batch(
-		func() tea.Msg {
-			g.Session.HideFooter.Store(true)
-			return nil
-		},
-		m.spinner.Tick,
-		commands.Post(messages.BossInitMsg{}),
-	)
+	return m.spinner.Tick
 }
 
-func (m bossPage) Close() error {
+func (m bossPage) OnEntering() (tea.Model, tea.Cmd) {
+	var (
+		w, _ = g.Window.GetSize()
+	)
+	progressModel.Width = max(w/2, 20)
+	g.Session.HideFooter.Store(true)
+	return m, commands.Post(messages.BossStartInstallPkgMsg{})
+}
+
+func (m bossPage) OnLeaving() (tea.Model, tea.Cmd) {
 	g.Session.HideFooter.Store(false)
-	return nil
+	return m, nil
 }
 
 func (m bossPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, consts.AppKeyMap.F1):
-			return m, func() tea.Msg {
-				return g.Config.Save(
-					func(config *model.FileConfig) {
-						config.BossModeBlank = !config.BossModeBlank
-					},
-				)
-			}
-		}
-	case messages.BossInitMsg:
-		var (
-			w, _ = g.Window.GetSize()
-		)
-		progressModel.Width = max(w/2, 20)
-		return m, commands.Post(messages.BossStartInstallPkgMsg{})
+
+	switch msg.(type) {
 	case messages.BossStartInstallPkgMsg:
 		// 随机安装一个
 		for name, _ := range packages {

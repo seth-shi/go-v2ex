@@ -24,8 +24,6 @@ type V2DetailResult struct {
 	Member       MemberResult       `json:"member"`
 	Node         NodeInfoResult     `json:"node"`
 	Supplements  []SupplementResult `json:"supplements"`
-
-	renderContent string
 }
 
 type SupplementResult struct {
@@ -37,35 +35,27 @@ type SupplementResult struct {
 
 func (r *V2DetailResult) GetContent(w int) string {
 
-	if r.renderContent == "" {
-		var content = r.Content
-		// 如果是链接出现多次, 那么只保留一次
-		list := pkg.ExtractImgURLsNoUnique(content)
-		for k, v := range lo.CountValues(list) {
-			if v > 1 {
-				content = strings.Replace(content, k, "", v-1)
-			}
+	var content = r.Content
+	// 如果是链接出现多次, 那么只保留一次
+	list := pkg.ExtractImgURLsNoUnique(content)
+	for k, v := range lo.CountValues(list) {
+		if v > 1 {
+			content = strings.Replace(content, k, "", v-1)
 		}
-
-		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
-	return r.renderContent
+	return pkg.SafeRenderHtml(content, w)
 }
 
 func (r *SupplementResult) GetContent(w int) string {
-	if r.renderContent == "" {
-		var content = r.Content
-		// 如果是链接出现多次, 那么只保留一次
-		list := pkg.ExtractImgURLsNoUnique(content)
-		for k, v := range lo.CountValues(list) {
-			if v > 1 {
-				content = strings.Replace(content, k, "", v-1)
-			}
+	var content = r.Content
+	// 如果是链接出现多次, 那么只保留一次
+	list := pkg.ExtractImgURLsNoUnique(content)
+	for k, v := range lo.CountValues(list) {
+		if v > 1 {
+			content = strings.Replace(content, k, "", v-1)
 		}
-
-		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
-	return r.renderContent
+	return pkg.SafeRenderHtml(content, w)
 }

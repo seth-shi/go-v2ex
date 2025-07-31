@@ -26,17 +26,17 @@ func newHelpPage() helpPage {
 }
 
 func (m helpPage) Init() tea.Cmd {
-	return tea.Batch(
-		func() tea.Msg {
-			g.Session.HideFooter.Store(true)
-			return nil
-		},
-	)
+	return nil
 }
 
-func (m helpPage) Close() error {
+func (m helpPage) OnEntering() (tea.Model, tea.Cmd) {
+	g.Session.HideFooter.Store(true)
+	return m, nil
+}
+
+func (m helpPage) OnLeaving() (tea.Model, tea.Cmd) {
 	g.Session.HideFooter.Store(false)
-	return nil
+	return m, nil
 }
 
 func (m helpPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

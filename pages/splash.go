@@ -7,6 +7,7 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/api"
 	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
@@ -18,7 +19,6 @@ func newSplashPage() splashPage {
 }
 
 func (m splashPage) Init() tea.Cmd {
-
 	return tea.Batch(
 		commands.LoadConfig(),
 	)
@@ -53,7 +53,7 @@ func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, te
 	if conf.Token == "" {
 		cmds = append(
 			cmds,
-			commands.Redirect(RouteSetting),
+			nav.Push(newSettingPage()),
 			commands.AlertInfo("请先按照说明配置秘钥和节点"),
 		)
 		return m, tea.Sequence(cmds...)
@@ -67,11 +67,12 @@ func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, te
 		// 获取个人信息
 		commands.LoadingMe.Run(api.V2ex.Me(context.Background())),
 		// 先跳转到主题页
-		commands.Redirect(RouteTopic),
+		nav.Push(newTopicPage()),
 	)
 	return m, tea.Sequence(cmds...)
 }
 
 func (m splashPage) View() string {
+
 	return loadingView("开屏页...")
 }

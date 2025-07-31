@@ -17,17 +17,18 @@ func (cli *v2exClient) GetTopics(
 	return func() tea.Msg {
 
 		var (
-			conf      = g.Config.Get()
-			nodeIndex = conf.ActiveTab
-			chooseV2  = conf.ChooseAPIV2
-			node      = g.GetGroupNode(nodeIndex)
-			res       []response.TopicResult
-			total     int
-			err       error
+			conf       = g.Config.Get()
+			nodeIndex  = conf.ActiveTab
+			chooseV2   = conf.ChooseAPIV2
+			node       = g.GetGroupNode(nodeIndex)
+			res        []response.TopicResult
+			total      int
+			err        error
+			cachePages = -1
 		)
 
 		// 如果是 myNodes, 那么就去用 V2 的接口
-		v2 := node.Key == g.NodesMy || chooseV2
+		v2 := chooseV2
 		// 最新最热, 只能用 v1
 		if node.Key == g.HotNode || node.Key == g.LatestNode {
 			v2 = false
@@ -35,7 +36,7 @@ func (cli *v2exClient) GetTopics(
 
 		g.Session.IsApiV2.Store(v2)
 		if v2 {
-			res, total, err = cli.v2TopicApi.GetTopicsByGroupNode(ctx, node, page)
+			res, cachePages, total, err = cli.v2TopicApi.GetTopicsByGroupNode(ctx, node, page)
 		} else {
 			res, total, err = cli.v1TopicApi.GetTopicsByGroupNode(ctx, node, page)
 		}
@@ -50,6 +51,7 @@ func (cli *v2exClient) GetTopics(
 				TotalCount: total,
 				CurrPage:   page,
 			},
+			CachePages: cachePages,
 		}
 	}
 }

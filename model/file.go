@@ -4,26 +4,24 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 )
 
 const (
-	envProduction  = "production"
-	envDevelopment = "development"
-	envMock        = "mock"
+	envProduction = "production"
 )
 
 type FileConfig struct {
-	Token         string `json:"personal_access_token"`
-	MyNodes       string `json:"my_nodes"`
-	Timeout       uint   `json:"timeout"`
-	ActiveTab     int    `json:"active_tab"`
-	ShowMode      int    `json:"show_mode"`
-	Env           string `json:"env"`
-	ChooseAPIV2   bool   `json:"choose_api_v2"`
-	BossModeBlank bool   `json:"boss_mode_blank"`
+	Token       string `json:"personal_access_token"`
+	MyNodes     string `json:"my_nodes"`
+	Timeout     uint   `json:"timeout"`
+	ActiveTab   int    `json:"active_tab"`
+	ShowMode    int    `json:"show_mode"`
+	Env         string `json:"env"`
+	ChooseAPIV2 bool   `json:"choose_api_v2"`
 }
 
 func NewDefaultFileConfig() *FileConfig {
@@ -40,13 +38,13 @@ func NewDefaultFileConfig() *FileConfig {
 }
 
 func (c *FileConfig) IsProductionEnv() bool {
-	return c.Env == envProduction
+	return strings.Contains(c.Env, "prod")
 }
 func (c *FileConfig) IsDevelopmentEnv() bool {
-	return c.Env == envDevelopment
+	return strings.Contains(c.Env, "dev")
 }
 func (c *FileConfig) IsMockEnv() bool {
-	return c.Env == envMock
+	return strings.Contains(c.Env, "mock")
 }
 
 func (c *FileConfig) SwitchShowMode() int {

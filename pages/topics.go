@@ -15,6 +15,7 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
 	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/response"
 	"github.com/seth-shi/go-v2ex/v2/styles"
 
@@ -25,12 +26,13 @@ import (
 )
 
 var (
-	cellStyle         = styles.Primary.Padding(0, 1).Width(5)
-	headerStyle       = styles.Primary.Bold(true).Align(lipgloss.Center)
-	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
-	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
-	inactiveTabStyle  = styles.Primary.Border(inactiveTabBorder, true).Padding(0, 1)
-	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
+	cellStyle                      = styles.Primary.Padding(0, 1).Width(5)
+	headerStyle                    = styles.Primary.Bold(true).Align(lipgloss.Center)
+	inactiveTabBorder              = tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder                = tabBorderWithBottom("┘", " ", "└")
+	inactiveTabStyle               = styles.Primary.Border(inactiveTabBorder, true).Padding(0, 1)
+	activeTabStyle                 = inactiveTabStyle.Border(activeTabBorder, true)
+	_                 nav.PageLife = topicPage{}
 )
 
 type topicPage struct {
@@ -39,6 +41,8 @@ type topicPage struct {
 	page       int
 	totalPages int
 	loading    bool
+	cachePages int
+	firstText  string
 }
 
 func newTopicPage() topicPage {
@@ -54,47 +58,52 @@ func (m topicPage) Init() tea.Cmd {
 	return m.getTopics(m.page)
 }
 
+func (m topicPage) OnEntering() (tea.Model, tea.Cmd) {
+	return m, commands.Post(messages.ShowStatusBarTextRequest{FirstText: m.firstText})
+}
+
+func (m topicPage) OnLeaving() (tea.Model, tea.Cmd) {
+	return m, nil
+}
+
 func (m topicPage) getTopics(page int) tea.Cmd {
 	return commands.LoadingRequestTopics.Run(api.V2ex.GetTopics(context.Background(), page))
 }
 
 func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	switch msgType := msg.(type) {
+	switch msg := msg.(type) {
 	case messages.GetTopicResponse:
-		return m.onTopicResult(msgType)
+		return m.onTopicResult(msg)
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msgType, consts.AppKeyMap.Tab):
+		case key.Matches(msg, consts.AppKeyMap.Tab):
 			return m.moveTabs(1)
-		case key.Matches(msgType, consts.AppKeyMap.ShiftTab):
+		case key.Matches(msg, consts.AppKeyMap.ShiftTab):
 			return m.moveTabs(-1)
-		case key.Matches(msgType, consts.AppKeyMap.KeyE):
+		case key.Matches(msg, consts.AppKeyMap.KeyE):
 			// 查看详情
 			curr := lo.NthOrEmpty(m.topics, m.index)
 			// 去详情页面
-			return m, tea.Sequence(
-				commands.Redirect(RouteDetail),
-				commands.Post(messages.GetDetailRequest{ID: curr.Id}),
-			)
-		case key.Matches(msgType, consts.AppKeyMap.Up):
+			return m, nav.Push(newDetailPage(curr.Id))
+		case key.Matches(msg, consts.AppKeyMap.Up):
 			m.index--
 			if m.index < 0 {
 				m.index = len(m.topics) - 1
 			}
 			return m, nil
-		case key.Matches(msgType, consts.AppKeyMap.Down):
+		case key.Matches(msg, consts.AppKeyMap.Down):
 			m.index++
 			if m.index > len(m.topics)-1 {
 				m.index = 0
 			}
 			return m, nil
-		case key.Matches(msgType, consts.AppKeyMap.Left):
+		case key.Matches(msg, consts.AppKeyMap.Left):
 			if m.page > 1 {
 				return m, m.getTopics(m.page - 1)
 			}
 			return m, nil
-		case key.Matches(msgType, consts.AppKeyMap.Right):
+		case key.Matches(msg, consts.AppKeyMap.Right):
 			if m.page < m.totalPages {
 				return m, m.getTopics(m.page + 1)
 			}
@@ -110,8 +119,7 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					),
 				)
 			}
-
-		case key.Matches(msgType, consts.AppKeyMap.KeyR):
+		case key.Matches(msg, consts.AppKeyMap.KeyR):
 			// 切换 V2 接口
 			return m, tea.Sequence(
 				m.onSwitchApiMode(),
@@ -132,22 +140,23 @@ func (m topicPage) onSwitchApiMode() tea.Cmd {
 				conf.ChooseAPIV2 = !conf.ChooseAPIV2
 			},
 		)
-		return messages.ErrorOrToast(err, "切换成功: V1 接口信息更多 / V2 接口有分页")
+		return messages.ErrorOrToast(err, "切换成功: V1 接口信息更多 / V2 接口有分页(最新/最热只支持V1)")
 	}
 }
 
 func (m topicPage) View() string {
-
-	if m.loading {
-		return loadingView("获取列表数据中...")
-	}
 
 	var (
 		doc strings.Builder
 	)
 	doc.WriteString(m.renderTabs())
 	doc.WriteString("\n")
-	doc.WriteString(m.renderTables())
+	if m.loading {
+		doc.WriteString(loadingView("获取列表数据中..."))
+	} else {
+		doc.WriteString(m.renderTables())
+	}
+
 	return doc.String()
 }
 
@@ -168,14 +177,17 @@ func (m topicPage) moveTabs(add int) (tea.Model, tea.Cmd) {
 	)
 }
 
-func (m topicPage) onTopicResult(msgType messages.GetTopicResponse) (tea.Model, tea.Cmd) {
+func (m topicPage) onTopicResult(msg messages.GetTopicResponse) (tea.Model, tea.Cmd) {
 
 	var (
-		result   = msgType.Data
-		pageInfo = msgType.PageInfo
+		conf     = g.Config.Get()
+		result   = msg.Data
+		pageInfo = msg.PageInfo
 		apiText  = "v1@api"
+		pageText = msg.PageInfo.ToString()
 	)
 
+	m.cachePages = msg.CachePages
 	m.topics = result
 	// 会话的直接设置
 	m.page = pageInfo.CurrPage
@@ -183,15 +195,15 @@ func (m topicPage) onTopicResult(msgType messages.GetTopicResponse) (tea.Model, 
 	// 显示错误和页码
 	m.loading = false
 
-	if g.Session.IsApiV2.Load() {
+	if conf.ChooseAPIV2 {
 		apiText = "v2@api"
+		if g.Session.IsApiV2.Load() && m.page >= m.cachePages {
+			pageText = styles.Err.Render(pageText)
+		}
 	}
+	m.firstText = fmt.Sprintf("%s %s", apiText, pageText)
 
-	return m, commands.Post(
-		messages.ShowStatusBarTextRequest{
-			FirstText: fmt.Sprintf("%s %s", apiText, pageInfo.ToString()),
-		},
-	)
+	return m, commands.Post(messages.ShowStatusBarTextRequest{FirstText: m.firstText})
 }
 
 func (m topicPage) renderTabs() string {

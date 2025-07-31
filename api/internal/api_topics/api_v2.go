@@ -12,6 +12,7 @@ import (
 	"github.com/puzpuzpuz/xsync/v4"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/pkg"
 	"github.com/seth-shi/go-v2ex/v2/response"
 	"golang.org/x/sync/errgroup"
 	"resty.dev/v3"
@@ -52,11 +53,11 @@ func (api *V2TopicApi) GetTopicsByGroupNode(
 	ctx context.Context,
 	node g.GroupNode,
 	page int,
-) (res []response.TopicResult, total int, err error) {
+) (res []response.TopicResult, cachePages, total int, err error) {
 
 	// 只允许单个请求进来获取 数据
 	if !api.isRequesting.CompareAndSwap(false, true) {
-		return nil, 0, ErrLockingRequestData
+		return nil, 0, 0, ErrLockingRequestData
 	}
 	defer api.finishRequest(&err)
 
@@ -80,8 +81,9 @@ func (api *V2TopicApi) GetTopicsByGroupNode(
 	}
 
 	res = lo.Subset(api.cacheData, (page-1)*perPage, perPage)
+	cachePages = pkg.TotalPages(len(api.cacheData), perPage)
 	total, _ = api.groupTotalCount.Load(node.Key)
-	return res, total, nil
+	return res, cachePages, total, nil
 }
 
 func (api *V2TopicApi) prepareRequest(node g.GroupNode, page int) error {

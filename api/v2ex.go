@@ -39,6 +39,8 @@ func SetUpHttpClient(conf *model.FileConfig) {
 			},
 		)
 		client.SetTransport(&pkg.MockRoundTripper{Mock: mockApiResp})
+	} else if conf.IsDevelopmentEnv() {
+		client.SetResponseBodyUnlimitedReads(true)
 	}
 
 	V2ex = &v2exClient{

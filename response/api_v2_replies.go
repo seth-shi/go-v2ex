@@ -23,18 +23,14 @@ type V2ReplyResult struct {
 
 func (r *V2ReplyResult) GetContent(w int) string {
 
-	if r.renderContent == "" {
-		var content = r.Content
-		// 如果是链接出现多次, 那么只保留一次
-		list := pkg.ExtractImgURLsNoUnique(content)
-		for k, v := range lo.CountValues(list) {
-			if v > 1 {
-				content = strings.Replace(content, k, "", v-1)
-			}
+	var content = r.Content
+	// 如果是链接出现多次, 那么只保留一次
+	list := pkg.ExtractImgURLsNoUnique(content)
+	for k, v := range lo.CountValues(list) {
+		if v > 1 {
+			content = strings.Replace(content, k, "", v-1)
 		}
-
-		r.renderContent = pkg.SafeRenderHtml(content, w)
 	}
 
-	return r.renderContent
+	return pkg.SafeRenderHtml(content, w)
 }

@@ -5,6 +5,7 @@ import (
 )
 
 type GetTopicResponse struct {
-	Data     []response.TopicResult
-	PageInfo *response.PerTenPageInfo
+	Data       []response.TopicResult
+	PageInfo   *response.PerTenPageInfo
+	CachePages int
 }

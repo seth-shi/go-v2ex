@@ -2,7 +2,9 @@ package pkg
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -18,11 +20,13 @@ import (
 	"github.com/eliukblau/pixterm/pkg/ansimage"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/model"
+	"github.com/seth-shi/go-v2ex/v2/styles"
 	"resty.dev/v3"
 )
 
 //go:embed data/gamelive.png
 var mockImageData []byte
+var errDownloadImageTimeout = errors.New("下载图片超时")
 
 // 正则表达式匹配 http://i.imgur.com/xxxx 或者 http://i.imgur.com/xxxx.png 格式的链接
 var (
@@ -34,6 +38,9 @@ func SetUpImageHttpClient(conf *model.FileConfig) {
 	imgClient = NewHTTPClient(conf)
 	imgClient.
 		SetDoNotParseResponse(true).
+		SetRedirectPolicy(resty.FlexibleRedirectPolicy(2)).
+		// for FlexibleRedirectPolicy 2
+		SetTimeout(imgClient.Timeout() * 2).
 		AddRequestMiddleware(withImageRequestUserAgent()).
 		SetLogger(RestyLogger())
 
@@ -110,8 +117,11 @@ func DownloadImageURL(urls []string, width int) map[string]string {
 	)
 	for val := range chImgRes {
 		if val.err != nil {
+			if errors.Is(val.err, context.DeadlineExceeded) {
+				val.err = errDownloadImageTimeout
+			}
 			slog.Error("图片处理失败", slog.String("url", val.URL), slog.Any("err", val.err))
-			result[val.URL] = ""
+			result[val.URL] = styles.Err.Render(val.err.Error())
 			continue
 		}
 
@@ -119,7 +129,7 @@ func DownloadImageURL(urls []string, width int) map[string]string {
 		str, err := imageToAnsImage(width, val.Data)
 		if err != nil {
 			slog.Error("图片转字符失败", slog.String("url", val.URL), slog.Any("err", err))
-			result[val.URL] = ""
+			result[val.URL] = styles.Err.Render(err.Error())
 			continue
 		}
 
@@ -155,8 +165,9 @@ func downloadImageRes(imgUrl string, semaphore chan struct{}, res chan imgRes, w
 	defer resp.Body.Close()
 
 	contentType := resp.Header().Get("Content-Type")
+	slog.Info("header", slog.Any("h", resp.Header()))
 	if !strings.Contains(contentType, "image") {
-		data.err = fmt.Errorf("响应头不是图片:%s", contentType)
+		data.err = fmt.Errorf("响应头不是图片[%s]", contentType)
 		res <- data
 		return
 	}

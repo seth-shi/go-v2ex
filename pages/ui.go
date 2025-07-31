@@ -4,32 +4,24 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kevm/bubbleo/navstack"
-	"github.com/kevm/bubbleo/window"
 	"github.com/samber/lo"
-	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"go.dalton.dog/bubbleup"
 )
 
 type Model struct {
-	navigator *navstack.Model
-
 	alert  bubbleup.AlertModel
 	footer FooterComponents
 }
 
 func NewUI(appVersion string) Model {
-	w := window.New(120, 30, 0, 0)
-	ns := navstack.New(&w)
-
 	alert := bubbleup.NewAlertModel(80, false)
 	registerDefaultAlertTypes(alert)
 	return Model{
-		navigator: &ns,
-		alert:     lo.FromPtr(alert),
-		footer:    NewFooter(appVersion),
+		alert:  lo.FromPtr(alert),
+		footer: NewFooter(appVersion),
 	}
 }
 
@@ -40,7 +32,7 @@ func (m Model) Init() tea.Cmd {
 		m.footer.Init(),
 		m.alert.Init(),
 		// 跳转去开屏页面
-		commands.Redirect(RouteSplash),
+		nav.Push(newSplashPage()),
 	)
 }
 
@@ -58,13 +50,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, consts.AppKeyMap.Space):
-			cmds = append(cmds, redirectIfSamePop(m.navigator.Top(), RouteBoss))
+			cmds = append(cmds, nav.PushOrBack(newBossPage()))
 		case key.Matches(msg, consts.AppKeyMap.HelpPage):
-			cmds = append(cmds, redirectIfSamePop(m.navigator.Top(), RouteHelp))
+			cmds = append(cmds, nav.PushOrBack(newHelpPage()))
 		case key.Matches(msg, consts.AppKeyMap.SettingPage):
-			cmds = append(cmds, redirectIfSamePop(m.navigator.Top(), RouteSetting))
+			cmds = append(cmds, nav.PushOrBack(newSettingPage()))
 		case key.Matches(msg, consts.AppKeyMap.KeyQ):
-			return m, commands.RedirectPop()
+			return m, nav.Back()
 		case key.Matches(msg, consts.AppKeyMap.CtrlQuit):
 			return m, tea.Quit
 		}
@@ -82,7 +74,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.footer, c = m.footer.Update(msg)
 	cmds = append(cmds, c)
 	// 路由控制
-	cmds = append(cmds, m.navigator.Update(msg))
+	cmds = append(cmds, nav.Update(msg))
 
 	return m, tea.Batch(cmds...)
 }
@@ -100,7 +92,7 @@ func (m Model) View() string {
 		body         = lipgloss.
 				NewStyle().
 				Height(h - footerHeight).
-				Render(m.navigator.View())
+				Render(nav.View())
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			body,

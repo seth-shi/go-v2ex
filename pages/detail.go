@@ -17,6 +17,7 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/pkg"
 	"github.com/seth-shi/go-v2ex/v2/response"
 	"github.com/seth-shi/go-v2ex/v2/styles"
@@ -39,6 +40,7 @@ var (
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b)
 	}()
+	_ nav.PageLife = detailPage{}
 )
 
 type detailPage struct {
@@ -51,15 +53,39 @@ type detailPage struct {
 	contentReply  []response.V2ReplyResult
 }
 
-func newDetailPage() detailPage {
+func (m detailPage) OnEntering() (tea.Model, tea.Cmd) {
+	// 获取内容 + 第一页的评论
+	var (
+		w, h = g.Window.GetSize()
+	)
+	m.viewport.Width = w
+	m.viewport.Height = h - lipgloss.Height(m.headerView()) - 2
+	// 重新修改键盘映射
+	m.viewport.KeyMap.Up = consts.AppKeyMap.Up
+	m.viewport.KeyMap.Down = consts.AppKeyMap.Down
+	m.viewport.KeyMap.Left = consts.AppKeyMap.Left
+	m.viewport.KeyMap.Right = consts.AppKeyMap.Right
+	return m, nil
+}
+
+func (m detailPage) OnLeaving() (tea.Model, tea.Cmd) {
+	return m, nil
+}
+
+func newDetailPage(id int64) detailPage {
 	return detailPage{
+		id:        id,
 		decodeMap: make(map[string]string),
 		viewport:  viewport.New(40, 40),
 	}
 }
 
 func (m detailPage) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		commands.
+			LoadingRequestDetail.
+			Run(api.V2ex.GetDetail(context.Background(), m.id)),
+	)
 }
 
 func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -68,26 +94,13 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	// 显示是否是 pro && 是否有人
-
 	switch msg := msg.(type) {
-	case messages.GetDetailRequest:
-		// 获取内容 + 第一页的评论
-		var (
-			w, h = g.Window.GetSize()
-		)
-		m.id = msg.ID
-		m.viewport.Width = w
-		m.viewport.Height = h
-		// 重新修改键盘映射
-		m.viewport.KeyMap.Up = consts.AppKeyMap.Up
-		m.viewport.KeyMap.Down = consts.AppKeyMap.Down
-		m.viewport.KeyMap.Left = consts.AppKeyMap.Left
-		m.viewport.KeyMap.Right = consts.AppKeyMap.Right
-		return m, tea.Batch(m.getDetail(), m.getReply())
 	case messages.GetDetailResponse:
 		m.contentDetail = msg.Data
 		cmds = append(cmds, m.renderContent())
+		if m.contentDetail.Replies > 0 {
+			cmds = append(cmds, m.getReply())
+		}
 	case messages.GetReplyResponse:
 		m.replyPageInfo = msg.Data.Pagination
 		m.contentReply = append(m.contentReply, msg.Data.Result...)
@@ -119,6 +132,11 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m detailPage) View() string {
+
+	if m.contentDetail.Id == 0 {
+		return loadingView(fmt.Sprintf("[%d]主题正在加载中...", m.id))
+	}
+
 	return fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View())
 }
 
@@ -153,7 +171,9 @@ func (m detailPage) buildContent() string {
 	var (
 		w, _              = g.Window.GetSize()
 		content           strings.Builder
-		contentTitleStyle = styles.Border.BorderRight(false).BorderBottom(false)
+		contentTitleStyle = styles.Border.
+					BorderRight(false).
+					BorderBottom(false)
 		// 第一页评论展示顶部
 		// 最后一页展示底部边框
 		boxStyle = styles.
@@ -187,15 +207,15 @@ func (m detailPage) buildContent() string {
 			Width(w).
 			Render(
 				fmt.Sprintf(
-					"V2EX > %s %s\n\n%s · %s · %d 回复\n\n%s\n\n%s",
+					"V2EX > %s · %s\n\n%s · %s · %d 回复\n\n%s\n\n%s",
 					styles.Bold.Render(m.contentDetail.Node.Title),
 					m.contentDetail.Url,
 					m.contentDetail.Member.GetUserNameLabel(me.Id),
 					carbon.CreateFromTimestamp(m.contentDetail.Created),
 					m.contentDetail.Replies,
-					lipgloss.NewStyle().
-						Bold(true).
-						Border(lipgloss.RoundedBorder(), false, false, true, false).
+					styles.
+						Bold.
+						Underline(true).
 						Render(m.contentDetail.Title),
 					wrap.String(decodeFn(m.contentDetail.GetContent(w)), w-2),
 				),
@@ -208,10 +228,11 @@ func (m detailPage) buildContent() string {
 	for i, c := range m.contentDetail.Supplements {
 
 		desc := fmt.Sprintf(
-			"#%d 条附言 · %s\n%s", i+1, carbon.CreateFromTimestamp(c.Created),
+			"#%d 条附言 · %s\n%s", i+1,
+			carbon.CreateFromTimestamp(c.Created),
 			decodeFn(c.GetContent(w)),
 		)
-		content.WriteString(contentTitleStyle.Width(w).Render(desc))
+		content.WriteString(contentTitleStyle.BorderTop(false).Width(w).Render(desc))
 	}
 
 	content.WriteString("\n")
@@ -225,7 +246,7 @@ func (m detailPage) buildContent() string {
 		)
 
 		floor := fmt.Sprintf(
-			"#%d · %s @%s%s",
+			"#%d · %s · @%s%s",
 			i+1,
 			carbon.CreateFromTimestamp(r.Created),
 			r.Member.GetUserNameLabel(me.Id),
@@ -238,12 +259,6 @@ func (m detailPage) buildContent() string {
 	}
 	content.WriteString(boxStyle.Width(w).Render(replyContent.String()))
 	return content.String()
-}
-
-func (m detailPage) getDetail() tea.Cmd {
-	return commands.
-		LoadingRequestDetail.
-		Run(api.V2ex.GetDetail(context.Background(), m.id))
 }
 
 func (m detailPage) decodeContent() (tea.Model, tea.Cmd) {
