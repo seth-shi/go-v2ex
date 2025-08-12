@@ -83,7 +83,6 @@ func (m Model) View() string {
 
 	var (
 		_, h = g.Window.GetSize()
-		sess = g.Session
 	)
 
 	var (
@@ -100,9 +99,5 @@ func (m Model) View() string {
 		)
 	)
 
-	if !sess.HideFooter.Load() {
-		content = m.alert.Render(content)
-	}
-
-	return content
+	return m.alert.Render(content)
 }

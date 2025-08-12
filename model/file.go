@@ -16,7 +16,7 @@ const (
 
 type FileConfig struct {
 	Token       string `json:"personal_access_token"`
-	MyNodes     string `json:"my_nodes"`
+	MyNodes     string `json:"my_node_keys"`
 	Timeout     uint   `json:"timeout"`
 	ActiveTab   int    `json:"active_tab"`
 	ShowMode    int    `json:"show_mode"`
@@ -28,7 +28,7 @@ func NewDefaultFileConfig() *FileConfig {
 	return &FileConfig{
 		// NOTE: 增加默认秘钥, 方便用户快速使用, 用户以后还是要自己配置
 		Token:       "35bbd155-df12-4778-9916-5dd59d967fef",
-		MyNodes:     "share,create,qna,jobs,programmer,career,invest,ideas,hardware",
+		MyNodes:     "",
 		Timeout:     5,
 		ActiveTab:   0,
 		ShowMode:    consts.ShowModeAll,

@@ -10,17 +10,18 @@ const (
 	NodesMy      = "my_nodes"
 	LatestNode   = "latest"
 	HotNode      = "hot"
-	myNodesTitle = "分享发现 · 分享创造 · 问与答 · 酷工作 · 程序员 · 职场话题 · 投资 · 奇思妙想 · 硬件 · 游戏开发"
+	myNodesTitle = "分享发现 · 分享创造 · 问与答 · 酷工作 · 程序员 · 职场话题 · Solana · 投资 · 奇思妙想 · 硬件 · 游戏开发"
 )
 
 var (
-	myNodesKey = []string{
+	MyNodeKeys = []string{
 		"share",
 		"create",
 		"qna",
 		"jobs",
 		"programmer",
 		"career",
+		"solana",
 		"invest",
 		"ideas",
 		"hardware",
@@ -57,6 +58,7 @@ var (
 			Name: "好玩",
 			Nodes: []string{
 				"share",
+				"crypto",
 				"games",
 				"movie",
 				"tv",
@@ -65,7 +67,7 @@ var (
 				"android",
 				"afterdark",
 			},
-			NodesTitle: "分享发现 · 游戏 · 电影 · 剧集 · 音乐 · 旅行 · Android · 天黑以后",
+			NodesTitle: "分享发现 · 加密货币 · 游戏 · 电影 · 剧集 · 音乐 · 旅行 · Android · 天黑以后",
 		},
 		{
 			Key:  "apple",
@@ -149,7 +151,7 @@ var (
 		{
 			Key:   NodesMy,
 			Name:  "*我的*",
-			Nodes: myNodesKey,
+			Nodes: MyNodeKeys,
 		},
 		{
 			Key:  "r2",
@@ -197,7 +199,7 @@ func (g *GroupNode) Title() string {
 
 	// 是否有过改动
 	title := strings.Join(g.Nodes, " · ")
-	defaultTitle := strings.Join(myNodesKey, " · ")
+	defaultTitle := strings.Join(MyNodeKeys, " · ")
 	if title == defaultTitle {
 		return myNodesTitle
 	}

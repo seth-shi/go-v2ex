@@ -118,7 +118,6 @@ func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
 			if s == "enter" {
-
 				if m.focusIndex == len(m.inputs) {
 					return m, m.saveSettings()
 				}
@@ -224,8 +223,9 @@ func (m settingPage) View() string {
 
 	if len(m.inputs) > 1 {
 		text := fmt.Sprintf(
-			"\n%s\n%s",
+			"\n%s\n默认节点:%s\n%s",
 			"所有节点此处查看: https://v2ex.com/planes (多个节点使用英文逗号隔开, URL 上的 https://v2ex.com/go/{name})",
+			strings.Join(g.MyNodeKeys, ","),
 			m.inputs[1].View(),
 		)
 		b.WriteString(tipStyle.Render(text))
