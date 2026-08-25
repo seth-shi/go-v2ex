@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/nav"
@@ -17,12 +16,16 @@ type Model struct {
 }
 
 func NewUI(appVersion string) Model {
-	alert := bubbleup.NewAlertModel(80, false)
-	registerDefaultAlertTypes(alert)
 	return Model{
-		alert:  lo.FromPtr(alert),
+		alert:  newAlertModel(80),
 		footer: NewFooter(appVersion),
 	}
+}
+
+func newAlertModel(width int) bubbleup.AlertModel {
+	alert := bubbleup.NewAlertModel(max(width, 20), false)
+	registerDefaultAlertTypes(alert)
+	return *alert
 }
 
 func (m Model) Init() tea.Cmd {
@@ -47,6 +50,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		g.Window.SetSize(msg)
+		m.alert = newAlertModel(msg.Width - 2)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, consts.AppKeyMap.Space):
@@ -54,8 +58,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, consts.AppKeyMap.HelpPage):
 			cmds = append(cmds, nav.PushOrBack(newHelpPage()))
 		case key.Matches(msg, consts.AppKeyMap.SettingPage):
+			// Comma opens settings from regular pages, but remains available as
+			// the node separator while editing the settings form.
+			if nav.IsActivePage(newSettingPage()) {
+				if msg.String() == "," {
+					break
+				}
+				return m, nav.Back()
+			}
 			cmds = append(cmds, nav.PushOrBack(newSettingPage()))
 		case key.Matches(msg, consts.AppKeyMap.KeyQ):
+			if nav.IsActivePage(newTopicPage()) {
+				return m, tea.Quit
+			}
 			return m, nav.Back()
 		case key.Matches(msg, consts.AppKeyMap.CtrlQuit):
 			return m, tea.Quit
@@ -90,7 +105,7 @@ func (m Model) View() string {
 		footerHeight = lipgloss.Height(footer)
 		body         = lipgloss.
 				NewStyle().
-				Height(h - footerHeight).
+				Height(max(h-footerHeight, 1)).
 				Render(nav.View())
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/seth-shi/go-v2ex/v2/api/internal/api_topics"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/model"
@@ -32,12 +34,6 @@ func SetUpHttpClient(conf *model.FileConfig) {
 		AddResponseMiddleware(rateLimitHandler)
 
 	if conf.IsMockEnv() {
-		// 默认使用 V2 接口
-		g.Config.Update(
-			func(conf *model.FileConfig) {
-				conf.ChooseAPIV2 = true
-			},
-		)
 		client.SetTransport(&pkg.MockRoundTripper{Mock: mockApiResp})
 	} else if conf.IsDevelopmentEnv() {
 		client.SetResponseBodyUnlimitedReads(true)
@@ -52,4 +48,8 @@ func SetUpHttpClient(conf *model.FileConfig) {
 
 func (cli *v2exClient) GetLimitRate() float64 {
 	return getLimitRate()
+}
+
+func hasAuthToken() bool {
+	return strings.TrimSpace(g.Config.Get().Token) != ""
 }

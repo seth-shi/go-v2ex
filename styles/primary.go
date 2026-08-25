@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Primary = lipgloss.NewStyle()
+	Primary = lipgloss.NewStyle().Foreground(Theme.Text)
 )

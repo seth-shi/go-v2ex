@@ -12,24 +12,24 @@ import (
 )
 
 var (
-	renderer *glamour.TermRenderer
-	once     sync.Once
+	renderers   = make(map[int]*glamour.TermRenderer)
+	renderersMu sync.Mutex
 )
 
 func getRenderer(w int) *glamour.TermRenderer {
-
-	once.Do(
-		func() {
-			// 主要文字颜色
-			renderer, _ = glamour.NewTermRenderer(
-				glamour.WithBaseURL("https://www.v2ex.com"),
-				glamour.WithEmoji(),
-				glamour.WithWordWrap(w),
-				glamour.WithStyles(getDefaultStyle()),
-			)
-		},
+	w = max(w, 1)
+	renderersMu.Lock()
+	defer renderersMu.Unlock()
+	if renderer, ok := renderers[w]; ok {
+		return renderer
+	}
+	renderer, _ := glamour.NewTermRenderer(
+		glamour.WithBaseURL("https://www.v2ex.com"),
+		glamour.WithEmoji(),
+		glamour.WithWordWrap(w),
+		glamour.WithStyles(getDefaultStyle()),
 	)
-
+	renderers[w] = renderer
 	return renderer
 }
 

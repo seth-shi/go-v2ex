@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	Active = lipgloss.NewStyle().Foreground(lipgloss.Color("#005FB8"))
+	Active = lipgloss.NewStyle().Foreground(Theme.Accent)
 )

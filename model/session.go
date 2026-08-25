@@ -6,5 +6,4 @@ import (
 
 type SessionData struct {
 	HideFooter atomic.Bool
-	IsApiV2    atomic.Bool
 }
