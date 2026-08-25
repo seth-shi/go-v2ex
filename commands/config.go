@@ -27,7 +27,13 @@ func LoadConfig() tea.Cmd {
 			if err != nil {
 				return messages.LoadConfigResult{Result: cfg, Err: err}
 			}
+			clearedLegacyToken := cfg.ClearLegacyDefaultToken()
 			g.Config.Set(cfg)
+			if clearedLegacyToken {
+				if err = model.SaveToFile(cfg); err != nil {
+					return messages.LoadConfigResult{Result: cfg, Err: err}
+				}
+			}
 		}
 
 		return messages.LoadConfigResult{Result: cfg}

@@ -1,7 +1,9 @@
 package model
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -11,30 +13,40 @@ import (
 )
 
 const (
-	envProduction = "production"
+	envProduction                = "production"
+	legacyDefaultTokenSHA256Hash = "8b4e43bc20cd911bfc63695c73738d15c0cd624a15ded7e15f8afd7fa753d8ef"
 )
 
 type FileConfig struct {
-	Token       string `json:"personal_access_token"`
-	MyNodes     string `json:"my_node_keys"`
-	Timeout     uint   `json:"timeout"`
-	ActiveTab   int    `json:"active_tab"`
-	ShowMode    int    `json:"show_mode"`
-	Env         string `json:"env"`
-	ChooseAPIV2 bool   `json:"choose_api_v2"`
+	Token          string `json:"personal_access_token"`
+	MyNodes        string `json:"my_node_keys"`
+	Timeout        uint   `json:"timeout"`
+	ActiveTab      int    `json:"active_tab"`
+	ShowMode       int    `json:"show_mode"`
+	Env            string `json:"env"`
+	OnboardingDone bool   `json:"onboarding_done"`
 }
 
 func NewDefaultFileConfig() *FileConfig {
 	return &FileConfig{
-		// NOTE: 增加默认秘钥, 方便用户快速使用, 用户以后还是要自己配置
-		Token:       "35bbd155-df12-4778-9916-5dd59d967fef",
-		MyNodes:     "",
-		Timeout:     5,
-		ActiveTab:   0,
-		ShowMode:    consts.ShowModeAll,
-		Env:         envProduction,
-		ChooseAPIV2: false,
+		Token:     "",
+		MyNodes:   "",
+		Timeout:   5,
+		ActiveTab: 0,
+		ShowMode:  consts.ShowModeAll,
+		Env:       envProduction,
 	}
+}
+
+// ClearLegacyDefaultToken removes only the credential bundled by older
+// releases. Personal tokens remain untouched.
+func (c *FileConfig) ClearLegacyDefaultToken() bool {
+	tokenHash := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.TrimSpace(c.Token))))
+	if tokenHash != legacyDefaultTokenSHA256Hash {
+		return false
+	}
+	c.Token = ""
+	return true
 }
 
 func (c *FileConfig) IsProductionEnv() bool {
@@ -86,7 +98,13 @@ func SaveToFile(conf *FileConfig) error {
 		return err
 	}
 
-	return os.WriteFile(ConfigPath(), bytesData, 0644)
+	configPath := ConfigPath()
+	if err = os.WriteFile(configPath, bytesData, 0600); err != nil {
+		return err
+	}
+	// WriteFile keeps the mode of an existing file, so enforce private access
+	// for configurations created by older releases as well.
+	return os.Chmod(configPath, 0600)
 }
 
 func ConfigPath() string {
