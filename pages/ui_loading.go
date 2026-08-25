@@ -7,15 +7,16 @@ import (
 )
 
 func loadingView(title string) string {
+	width, height := g.Window.GetSize()
+	if !g.Session.HideFooter.Load() && g.Config.Get().ShowFooter() {
+		height--
+	}
+	return loadingViewWithin(title, width, height)
+}
 
-	var (
-		width, height = g.Window.GetSize()
-	)
-
-	return styles.Bold.
-		Align(lipgloss.Center).
-		PaddingTop(max(height/4, 2)).
-		Bold(true).
-		Width(width).
-		Render(title)
+func loadingViewWithin(title string, width, height int) string {
+	brand := styles.Active.Bold(true).Render("◆  GO V2EX")
+	status := styles.Title.Render(title)
+	content := lipgloss.JoinVertical(lipgloss.Center, brand, "", status, styles.Meta.Render("正在加载，请稍候…"))
+	return lipgloss.Place(max(width, 1), max(height, 1), lipgloss.Center, lipgloss.Center, content)
 }

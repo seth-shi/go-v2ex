@@ -2,16 +2,23 @@ package pages
 
 import (
 	"context"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/seth-shi/go-v2ex/v2/api"
 	"github.com/seth-shi/go-v2ex/v2/commands"
+	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/model"
 	"github.com/seth-shi/go-v2ex/v2/nav"
 	"github.com/seth-shi/go-v2ex/v2/pkg"
 )
 
+var _ nav.PageLife = splashPage{}
+
 type splashPage struct {
+	showWelcome bool
+	continued   bool
 }
 
 func newSplashPage() splashPage {
@@ -24,11 +31,25 @@ func (m splashPage) Init() tea.Cmd {
 	)
 }
 
+func (m splashPage) OnEntering() (tea.Model, tea.Cmd) {
+	g.Session.HideFooter.Store(m.showWelcome)
+	return m, nil
+}
+
+func (m splashPage) OnLeaving() (tea.Model, tea.Cmd) {
+	g.Session.HideFooter.Store(false)
+	return m, nil
+}
+
 func (m splashPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case messages.LoadConfigResult:
 		return m.onConfigResult(msg)
+	case tea.KeyMsg:
+		if m.showWelcome && msg.String() == "enter" {
+			return m.continueAfterWelcome()
+		}
 	}
 
 	return m, nil
@@ -48,31 +69,52 @@ func (m splashPage) onConfigResult(msg messages.LoadConfigResult) (tea.Model, te
 		commands.AlertError(msg.Err),
 		commands.Post(messages.CheckUpgradeAppRequest{}),
 	}
-
-	// 没 token 去配置页面
-	if conf.Token == "" {
-		cmds = append(
-			cmds,
-			nav.Push(newSettingPage()),
-			commands.AlertInfo("请先按照说明配置秘钥和节点"),
-		)
+	if !conf.OnboardingDone {
+		m.showWelcome = true
+		g.Session.HideFooter.Store(true)
 		return m, tea.Sequence(cmds...)
 	}
 
-	// 去触发对应的地方获取数据
-	cmds = append(
-		cmds,
-		// 获取 token 过期信息
-		commands.LoadingGetToken.Run(api.V2ex.GetToken(context.Background())),
-		// 获取个人信息
-		commands.LoadingMe.Run(api.V2ex.Me(context.Background())),
-		// 先跳转到主题页
-		nav.Push(newTopicPage()),
-	)
+	m.continued = true
+	cmds = append(cmds, mainPageCommands(conf)...)
 	return m, tea.Sequence(cmds...)
 }
 
-func (m splashPage) View() string {
+func (m splashPage) continueAfterWelcome() (tea.Model, tea.Cmd) {
+	if m.continued {
+		return m, nil
+	}
 
-	return loadingView("开屏页...")
+	m.showWelcome = false
+	m.continued = true
+	g.Session.HideFooter.Store(false)
+	save := func() tea.Msg {
+		err := g.Config.Save(func(conf *model.FileConfig) {
+			conf.OnboardingDone = true
+		})
+		return messages.ErrorOrToast(err, "欢迎使用 Go V2EX")
+	}
+	cmds := []tea.Cmd{save}
+	cmds = append(cmds, mainPageCommands(g.Config.Get())...)
+	return m, tea.Sequence(cmds...)
+}
+
+func mainPageCommands(conf *model.FileConfig) []tea.Cmd {
+	cmds := []tea.Cmd{nav.Push(newTopicPage())}
+	if strings.TrimSpace(conf.Token) == "" {
+		return cmds
+	}
+
+	// 先显示主题页，再在后台检查令牌和个人信息。
+	return append(cmds, tea.Batch(
+		commands.LoadingGetToken.Run(api.V2ex.GetToken(context.Background())),
+		commands.LoadingMe.Run(api.V2ex.Me(context.Background())),
+	))
+}
+
+func (m splashPage) View() string {
+	if m.showWelcome {
+		return welcomeView()
+	}
+	return loadingView("正在连接 V2EX")
 }

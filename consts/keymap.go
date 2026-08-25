@@ -87,8 +87,8 @@ var AppKeyMap = KeyMap{
 		key.WithHelp("?", fmt.Sprintf("%s查看帮助页面(再按一次返回首页)", allPageTitle)),
 	),
 	SettingPage: key.NewBinding(
-		key.WithKeys("`"),
-		key.WithHelp("`", fmt.Sprintf("%s反引号:查看帮助页面(再按一次返回首页)", allPageTitle)),
+		key.WithKeys("`", ","),
+		key.WithHelp("`/，", fmt.Sprintf("%s打开设置页面(再按一次返回)", allPageTitle)),
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
@@ -116,7 +116,7 @@ var AppKeyMap = KeyMap{
 	),
 	KeyR: key.NewBinding(
 		key.WithKeys("r"),
-		key.WithHelp("r", fmt.Sprintf("%s切换接口版本 / %s解码内容(图片/base64)", topicPageTitle, detailPageTitle)),
+		key.WithHelp("r", fmt.Sprintf("%s解码内容(图片/base64)", detailPageTitle)),
 	),
 	UpgradeApp: key.NewBinding(
 		key.WithKeys("u"),

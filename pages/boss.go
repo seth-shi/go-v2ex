@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/samber/lo"
 	"github.com/samber/lo/mutable"
 	"github.com/seth-shi/go-v2ex/v2/commands"
@@ -65,6 +66,10 @@ func (m bossPage) OnLeaving() (tea.Model, tea.Cmd) {
 func (m bossPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg.(type) {
+	case tea.WindowSizeMsg:
+		w, _ := g.Window.GetSize()
+		progressModel.Width = max(min(w-12, 60), 10)
+		return m, nil
 	case messages.BossStartInstallPkgMsg:
 		// 随机安装一个
 		for name, _ := range packages {
@@ -104,24 +109,41 @@ func (m bossPage) View() string {
 
 	var (
 		content strings.Builder
-		// 只保留 5 个显示下载中
-		loadingIndex = len(runningJobs) - 5
-		checked      = styles.Active.Render("✓")
+		w, h    = g.Window.GetSize()
+		checked = lipgloss.NewStyle().Foreground(styles.Theme.Success).Render("✓")
 	)
+	panelWidth := min(max(w-6, 34), 76)
+	progressModel.Width = max(min(panelWidth-4, 60), 10)
+	visibleJobs := max(min(h-12, 8), 3)
+	start := max(len(runningJobs)-visibleJobs, 0)
 
-	for i, name := range runningJobs {
+	header := styles.Title.Render("依赖安装程序") + "\n" + styles.Meta.Render("正在同步项目所需的软件包")
+	current := "准备任务…"
+	if len(runningJobs) > 0 {
+		current = ansi.TruncateWc(runningJobs[len(runningJobs)-1], panelWidth-8, "…")
+	}
+	status := lipgloss.NewStyle().Background(styles.Theme.AccentDim).Padding(0, 1).Render(m.spinner.View() + "  " + current)
+
+	for i, name := range runningJobs[start:] {
+		actualIndex := start + i
 		prefix := checked
-		if i > loadingIndex {
+		if actualIndex == len(runningJobs)-1 {
 			prefix = m.spinner.View()
 		}
-		content.WriteString(fmt.Sprintf("%s %s", prefix, name))
+		content.WriteString(fmt.Sprintf("%s  %s", prefix, styles.Meta.Render(ansi.TruncateWc(name, panelWidth-8, "…"))))
 		content.WriteString("\n")
 	}
-	content.WriteString(progressModel.View())
-	content.WriteString(" ")
-	content.WriteString("\n")
-	// 显示一个进度条再最上面
-	return lipgloss.NewStyle().Padding(1).Render(content.String())
+	if len(runningJobs) == 0 {
+		content.WriteString(styles.Meta.Render("等待安装队列"))
+	}
+	percent := fmt.Sprintf("%3.0f%%", progressModel.Percent()*100)
+	progressLine := lipgloss.JoinHorizontal(lipgloss.Center, progressModel.View(), "  ", styles.Meta.Render(percent))
+	body := lipgloss.JoinVertical(lipgloss.Left,
+		header, "", status, "", progressLine, "",
+		styles.Meta.Bold(true).Render("最近任务"), "", strings.TrimSpace(content.String()),
+	)
+	panel := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Theme.Subtle).Padding(1, 2).Width(panelWidth).Render(body)
+	return lipgloss.Place(max(w, 1), max(h, 1), lipgloss.Center, lipgloss.Center, panel)
 }
 
 func (m bossPage) downloadAndInstall(pkg string) (tea.Model, tea.Cmd) {

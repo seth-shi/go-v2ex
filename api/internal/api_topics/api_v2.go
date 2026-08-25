@@ -228,10 +228,8 @@ func (api *V2TopicApi) requestV2Topics(
 						Name:  nodeKey,
 						Title: nodeKey,
 					},
-					Title: item.Title,
-					Member: response.MemberResult{
-						Username: item.LastReplyBy,
-					},
+					Title:       item.Title,
+					LastReplyBy: item.LastReplyBy,
 					LastTouched: item.LastTouched,
 					Replies:     item.Replies,
 				}

@@ -28,7 +28,9 @@ var (
 
 func beforeRequest(client *resty.Client, request *resty.Request) error {
 	// 修改后及时生效
-	request.SetAuthToken(g.Config.Get().Token)
+	if token := strings.TrimSpace(g.Config.Get().Token); token != "" && strings.Contains(request.URL, apiV2BasePath) {
+		request.SetAuthToken(token)
+	}
 	return nil
 }
 

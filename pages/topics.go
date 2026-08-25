@@ -3,7 +3,6 @@ package pages
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -21,18 +20,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
-	"github.com/dromara/carbon/v2"
 )
 
 var (
-	cellStyle                      = styles.Primary.Padding(0, 1).Width(5)
-	headerStyle                    = styles.Primary.Bold(true).Align(lipgloss.Center)
-	inactiveTabBorder              = tabBorderWithBottom("┴", "─", "┴")
-	activeTabBorder                = tabBorderWithBottom("┘", " ", "└")
-	inactiveTabStyle               = styles.Primary.Border(inactiveTabBorder, true).Padding(0, 1)
-	activeTabStyle                 = inactiveTabStyle.Border(activeTabBorder, true)
-	_                 nav.PageLife = topicPage{}
+	inactiveTabStyle              = styles.Meta.Padding(0, 1)
+	activeTabStyle                = lipgloss.NewStyle().Foreground(styles.Theme.Text).Background(styles.Theme.AccentDim).Bold(true).Padding(0, 1)
+	_                nav.PageLife = topicPage{}
 )
 
 type topicPage struct {
@@ -82,6 +75,9 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, consts.AppKeyMap.ShiftTab):
 			return m.moveTabs(-1)
 		case key.Matches(msg, consts.AppKeyMap.KeyE):
+			if len(m.topics) == 0 {
+				return m, nil
+			}
 			// 查看详情
 			curr := lo.NthOrEmpty(m.topics, m.index)
 			// 去详情页面
@@ -107,24 +103,6 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.page < m.totalPages {
 				return m, m.getTopics(m.page + 1)
 			}
-			// 如果用 V1, 提醒可以是用 R 键切换
-			canChoose := g.GetGroupNode(g.Config.Get().ActiveTab).CanChooseApiVersion()
-			if !g.Session.IsApiV2.Load() && canChoose {
-				return m, commands.AlertInfo(
-					fmt.Sprintf(
-						"按[%s]键可切换接口版本", strings.Join(
-							consts.AppKeyMap.KeyR.Keys(),
-							" ",
-						),
-					),
-				)
-			}
-		case key.Matches(msg, consts.AppKeyMap.KeyR):
-			// 切换 V2 接口
-			return m, tea.Sequence(
-				m.onSwitchApiMode(),
-				m.getTopics(1),
-			)
 		default:
 			return m, nil
 		}
@@ -133,26 +111,15 @@ func (m topicPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m topicPage) onSwitchApiMode() tea.Cmd {
-	return func() tea.Msg {
-		err := g.Config.Save(
-			func(conf *model.FileConfig) {
-				conf.ChooseAPIV2 = !conf.ChooseAPIV2
-			},
-		)
-		return messages.ErrorOrToast(err, "切换成功: V1 接口信息更多 / V2 接口有分页(最新/最热只支持V1)")
-	}
-}
-
 func (m topicPage) View() string {
-
-	var (
-		doc strings.Builder
-	)
-	doc.WriteString(m.renderTabs())
+	var doc strings.Builder
+	header := m.renderTabs()
+	doc.WriteString(header)
 	doc.WriteString("\n")
 	if m.loading {
-		doc.WriteString(loadingView("获取列表数据中..."))
+		w, h := g.Window.GetSize()
+		availableHeight := max(h-lipgloss.Height(header)-1, 1)
+		doc.WriteString(loadingViewWithin("正在获取主题", w, availableHeight))
 	} else {
 		doc.WriteString(m.renderTables())
 	}
@@ -180,11 +147,9 @@ func (m topicPage) moveTabs(add int) (tea.Model, tea.Cmd) {
 func (m topicPage) onTopicResult(msg messages.GetTopicResponse) (tea.Model, tea.Cmd) {
 
 	var (
-		conf     = g.Config.Get()
 		result   = msg.Data
 		pageInfo = msg.PageInfo
-		apiText  = "v1@api"
-		pageText = msg.PageInfo.ToString()
+		pageText = fmt.Sprintf("第 %d 页 · %d 个主题", msg.PageInfo.CurrPage, msg.PageInfo.TotalCount)
 	)
 
 	m.cachePages = msg.CachePages
@@ -195,13 +160,7 @@ func (m topicPage) onTopicResult(msg messages.GetTopicResponse) (tea.Model, tea.
 	// 显示错误和页码
 	m.loading = false
 
-	if conf.ChooseAPIV2 {
-		apiText = "v2@api"
-		if g.Session.IsApiV2.Load() && m.page >= m.cachePages {
-			pageText = styles.Err.Render(pageText)
-		}
-	}
-	m.firstText = fmt.Sprintf("%s %s", apiText, pageText)
+	m.firstText = pageText
 
 	return m, commands.Post(messages.ShowStatusBarTextRequest{FirstText: m.firstText})
 }
@@ -211,142 +170,179 @@ func (m topicPage) renderTabs() string {
 		doc            strings.Builder
 		renderedTabs   []string
 		tabs           = g.OfficialNodes
-		activeTab      *g.GroupNode
 		activeTabIndex = g.Config.Get().ActiveTab
+		width, _       = g.Window.GetSize()
+		contentWidth   = max(width-2, 20)
 	)
 
-	for i, _ := range tabs {
+	// Draw a compact, borderless tab strip. On narrow screens it follows the
+	// active tab instead of wrapping and pushing the list out of alignment.
+	start := max(0, activeTabIndex-2)
+	end := start
+	used := 0
+	for end < len(tabs) {
+		next := lipgloss.Width(tabs[end].Name) + 2
+		if end > start && used+next > max(contentWidth-4, 20) {
+			break
+		}
+		used += next
+		end++
+	}
+	if start > 0 {
+		renderedTabs = append(renderedTabs, styles.Meta.Render("‹ "))
+	}
+	for i := start; i < end; i++ {
 		t := g.GetGroupNode(i)
-		var style lipgloss.Style
-		isFirst, isLast, isActive := i == 0, i == len(tabs)-1, i == activeTabIndex
-		if isActive {
+		style := inactiveTabStyle
+		if i == activeTabIndex {
 			style = activeTabStyle
-			activeTab = &t
-		} else {
-			style = inactiveTabStyle
 		}
-		border, _, _, _, _ := style.GetBorder()
-		if isFirst && isActive {
-			border.BottomLeft = "│"
-		} else if isFirst {
-			border.BottomLeft = "├"
-		} else if isLast && isActive {
-			border.BottomRight = "│"
-		} else if isLast {
-			border.BottomRight = "┤"
-		}
-		style = style.Border(border)
 		renderedTabs = append(renderedTabs, style.Render(t.Name))
 	}
-
-	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
-	doc.WriteString(row)
-	// 增加一行显示二级
-	if activeTab != nil {
-		doc.WriteString("\n")
-		doc.WriteString(styles.Hint.PaddingLeft(1).Render(activeTab.Title()))
+	if end < len(tabs) {
+		renderedTabs = append(renderedTabs, styles.Meta.Render(" ›"))
 	}
+
+	active := g.GetGroupNode(activeTabIndex)
+	pageText := fmt.Sprintf("第 %d 页", m.page)
+	heading := styles.Title.Render("主题") + styles.Meta.Render("  ·  "+active.Title())
+	heading = ansi.TruncateWc(heading, max(contentWidth-lipgloss.Width(pageText)-2, 8), "…")
+	gap := max(contentWidth-lipgloss.Width(heading)-lipgloss.Width(pageText), 1)
+	doc.WriteString(" " + heading + strings.Repeat(" ", gap) + styles.Meta.Render(pageText))
+	doc.WriteString("\n ")
+	doc.WriteString(lipgloss.JoinHorizontal(lipgloss.Center, renderedTabs...))
+	doc.WriteString("\n ")
+	doc.WriteString(styles.Divider.Render(strings.Repeat("─", contentWidth)))
 
 	return doc.String()
 }
 
 func (m topicPage) renderTables() string {
 	if len(m.topics) == 0 {
-		return ""
-	}
-	// 表格
-	var (
-		w, _ = g.Window.GetSize()
-		me   = g.Me.Get()
-
-		headers     = []string{"#", "节点", "标题", "OP", "回复数", "时间"}
-		rows        [][]string
-		columnWidth = []int{
-			3, // 序号
-			0,
-			0,
-			0,
-			7,  // 回复数
-			20, // 时间
-		}
-	)
-	if g.Session.IsApiV2.Load() && len(headers) > 3 {
-		headers[3] = "LR"
-	}
-
-	for i, topic := range m.topics {
-
-		// 设置列自适应宽度
-		nodeTitle := topic.Node.Title
-		if len(columnWidth) > 1 && len(nodeTitle) > columnWidth[1] {
-			// lipgloss.Width 处理中文, len 处理空格
-			columnWidth[1] = max(lipgloss.Width(nodeTitle), len(nodeTitle))
-		}
-
-		// 这样子就不会显示 OP
-		member := topic.Member.GetUserNameLabel(me.Id)
-		if len(columnWidth) > 3 && len(member) > columnWidth[3] {
-			columnWidth[3] = min(lipgloss.Width(member), len(member)) + 3
-		}
-
-		rows = append(
-			rows, []string{
-				strconv.Itoa(i + 1),
-				nodeTitle,
-				topic.GetTitle(),
-				member,
-				styles.HotText(topic.Replies),
-				carbon.CreateFromTimestamp(topic.LastTouched).String(),
-			},
+		w, h := g.Window.GetSize()
+		empty := lipgloss.JoinVertical(lipgloss.Center,
+			styles.Title.Render("这里还没有主题"),
+			styles.Meta.Render("可用 Tab 切换节点，或用 ← → 查看其他页面"),
 		)
+		return lipgloss.Place(max(w, 1), max(h-4, 1), lipgloss.Center, lipgloss.Center, empty)
+	}
+	var (
+		w, h = g.Window.GetSize()
+		me   = g.Me.Get()
+		doc  strings.Builder
+	)
+
+	contentWidth := max(w-2, 16)
+	// Medium and narrow terminals use a calmer two-line layout. Wide screens
+	// keep the table so author and activity metadata stay easy to compare.
+	if w >= 92 {
+		return lipgloss.NewStyle().MarginLeft(1).Render(m.renderTopicTable(contentWidth, me.Id))
 	}
 
-	if len(columnWidth) > 1 && columnWidth[1] < 4 {
-		columnWidth[1] = 4
-	}
-
-	// len(tableStyles) + 1 = 列数 (再 +1 等于边框数)
-	titleWidth := w - (len(columnWidth) + 1 + 1) - lo.Sum(columnWidth)
-	for i, lines := range rows {
-		if len(lines) > 2 {
-			title := lines[2]
-			rows[i][2] = ansi.TruncateWc(title, titleWidth, "...")
+	visible := max((h-4)/2, 1)
+	start := min(max(m.index-visible/2, 0), max(len(m.topics)-visible, 0))
+	end := min(start+visible, len(m.topics))
+	for i := start; i < end; i++ {
+		topic := m.topics[i]
+		selected := i == m.index
+		marker := "  "
+		if selected {
+			marker = styles.Active.Bold(true).Render("┃ ")
+		}
+		title := ansi.TruncateWc(topic.GetTitle(), max(contentWidth-2, 8), "…")
+		titleStyle := styles.Title
+		if selected {
+			titleStyle = titleStyle.Foreground(styles.Theme.Accent)
+		}
+		member := topicUser(topic, me.Id)
+		meta := fmt.Sprintf("%s · %s · %s回复 · %s", topic.Node.Title, member, formatMetric(topic.Replies), relativeTime(topic.LastTouched))
+		meta = ansi.TruncateWc(meta, max(contentWidth-2, 8), "…")
+		row := marker + titleStyle.Render(title) + "\n  " + styles.Meta.Render(meta)
+		if selected {
+			row = styles.SelectedRow.Width(contentWidth).Render(row)
+		}
+		doc.WriteString(row)
+		if i < end-1 {
+			doc.WriteString("\n")
 		}
 	}
-
-	t := table.New().
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle()).
-		StyleFunc(
-			func(row, col int) lipgloss.Style {
-				if row == table.HeaderRow {
-					return headerStyle
-				}
-
-				style := cellStyle
-				if col == 2 {
-					style = lipgloss.NewStyle().Width(titleWidth)
-				} else if col < len(columnWidth) {
-					style = lipgloss.NewStyle().Width(columnWidth[col])
-				}
-
-				if row == m.index {
-					style = styles.Active.Bold(true)
-					rows[row][0] = "*"
-				}
-
-				return style
-			},
-		).
-		Headers(headers...).
-		Rows(rows...)
-	return t.String()
+	return lipgloss.NewStyle().MarginLeft(1).Render(doc.String())
 }
 
-func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
-	border := lipgloss.RoundedBorder()
-	border.BottomLeft = left
-	border.Bottom = middle
-	border.BottomRight = right
-	return border
+func (m topicPage) renderTopicTable(width, meID int) string {
+	const (
+		nodeWidth    = 8
+		memberWidth  = 12
+		repliesWidth = 6
+		activeWidth  = 8
+	)
+	var doc strings.Builder
+	titleWidth := max(width-nodeWidth-memberWidth-repliesWidth-activeWidth-10, 12)
+	header := "  " + fixedCell("节点", nodeWidth) + "  " + fixedCell("标题", titleWidth) + "  " + fixedCell("用户", memberWidth) + "  " + rightCell("回复", repliesWidth) + "  " + rightCell("活跃", activeWidth)
+	doc.WriteString(styles.Meta.Bold(true).Render(header))
+	doc.WriteString("\n")
+	doc.WriteString(styles.Divider.Render(strings.Repeat("─", max(width, 1))))
+	doc.WriteString("\n")
+
+	_, h := g.Window.GetSize()
+	visible := max(h-6, 1)
+	start := min(max(m.index-visible/2, 0), max(len(m.topics)-visible, 0))
+	end := min(start+visible, len(m.topics))
+	for i := start; i < end; i++ {
+		topic := m.topics[i]
+		selected := i == m.index
+		marker := "  "
+		if selected {
+			marker = styles.Active.Bold(true).Render("┃ ")
+		}
+		title := fixedCell(topic.GetTitle(), titleWidth)
+		if selected {
+			title = styles.Active.Bold(true).Render(title)
+		}
+		row := marker +
+			styles.Meta.Render(fixedCell(topic.Node.Title, nodeWidth)) + "  " +
+			title + "  " +
+			fixedCell(topicUser(topic, meID), memberWidth) + "  " +
+			rightCell(formatMetric(topic.Replies), repliesWidth) + "  " +
+			styles.Meta.Render(rightCell(relativeTime(topic.LastTouched), activeWidth))
+		if selected {
+			row = styles.SelectedRow.Width(max(width, 1)).Render(row)
+		}
+		doc.WriteString(row)
+		if i < end-1 {
+			doc.WriteString("\n")
+		}
+	}
+	return doc.String()
+}
+
+func topicUser(topic response.TopicResult, meID int) string {
+	if topic.Member.Username != "" {
+		return topic.Member.GetUserNameLabel(meID)
+	}
+	if topic.LastReplyBy != "" {
+		return "↩ " + topic.LastReplyBy
+	}
+	return "—"
+}
+
+func fixedCell(value string, width int) string {
+	value = ansi.TruncateWc(value, width, "…")
+	return value + strings.Repeat(" ", max(width-lipgloss.Width(value), 0))
+}
+
+func rightCell(value string, width int) string {
+	value = ansi.TruncateWc(value, width, "…")
+	return strings.Repeat(" ", max(width-lipgloss.Width(value), 0)) + value
+}
+
+func formatMetric(value int) string {
+	switch {
+	case value >= 1_000_000:
+		return fmt.Sprintf("%.1fm", float64(value)/1_000_000)
+	case value >= 1_000:
+		return fmt.Sprintf("%.1fk", float64(value)/1_000)
+	default:
+		return fmt.Sprintf("%d", value)
+	}
 }

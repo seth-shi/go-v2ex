@@ -1,7 +1,6 @@
 package pages
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -17,21 +16,20 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/reflow/wrap"
+)
+
+const (
+	tokenSettingsURL = "https://www.v2ex.com/settings/tokens"
+	nodeDirectoryURL = "https://www.v2ex.com/planes"
 )
 
 var (
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#31bdec"))
-	blurredStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#c2c2c2"))
+	focusedStyle = lipgloss.NewStyle().Foreground(styles.Theme.Accent)
+	blurredStyle = lipgloss.NewStyle().Foreground(styles.Theme.Muted)
 	cursorStyle  = focusedStyle
 	noStyle      = lipgloss.NewStyle()
-
-	focusedButton = focusedStyle.Render("[ 保存 ]")
-	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("保存"))
-
-	tipStyle = lipgloss.NewStyle().
-			Padding(1, 1, 0, 1)
-
-	formsCount = 3
 )
 
 type settingPage struct {
@@ -54,12 +52,13 @@ func newSettingPage() settingPage {
 		switch i {
 		case 0:
 			t.Placeholder = ""
-			t.Prompt = "认证令牌:"
+			t.Prompt = ""
 			t.Focus()
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
 		case 1:
-			t.Prompt = "我的节点:"
+			t.Prompt = ""
+			t.Placeholder = "programmer,qna,jobs"
 		}
 
 		m.inputs[i] = t
@@ -99,6 +98,10 @@ func (m settingPage) OnLeaving() (tea.Model, tea.Cmd) {
 func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		for i := range m.inputs {
+			m.inputs[i].Width = max(min(msg.Width-10, 72), 16)
+		}
 	case messages.LoadConfigResult:
 		m.loaded = true
 		m.inputs[0].SetValue(msg.Result.Token)
@@ -130,14 +133,14 @@ func (m settingPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focusIndex++
 			}
 
-			if m.focusIndex > formsCount {
+			if m.focusIndex >= len(m.inputs)+1 {
 				m.focusIndex = 0
 			} else if m.focusIndex < 0 {
-				m.focusIndex = formsCount - 1
+				m.focusIndex = len(m.inputs)
 			}
 
 			// 更新表单的值
-			cmds := make([]tea.Cmd, formsCount)
+			cmds := make([]tea.Cmd, len(m.inputs))
 			for i := 0; i <= len(m.inputs)-1; i++ {
 				if i == m.focusIndex {
 					// Set focused state
@@ -194,7 +197,6 @@ func (m settingPage) saveSettings() tea.Cmd {
 
 func (m settingPage) View() string {
 	var (
-		b    strings.Builder
 		w, h = g.Window.GetSize()
 	)
 
@@ -202,46 +204,69 @@ func (m settingPage) View() string {
 		return loadingView("载入配置中...")
 	}
 
-	hits := fmt.Sprintf(
-		`tab 切换表单, 回车确认(如有请求超时, 请设置 clash 全局代理, 或者复制代理环境变量到终端执行)%s再按一次[%s]返回上一页`,
-		"\n",
-		strings.Join(consts.AppKeyMap.SettingPage.Keys(), " "),
-	)
-	b.WriteString(styles.Err.PaddingLeft(1).Render(hits))
-	b.WriteString("\n")
-	text := fmt.Sprintf("配置文件路径: %s", model.ConfigPath())
-	b.WriteString(styles.Bold.PaddingLeft(1).Render(text))
-
-	if len(m.inputs) > 0 {
-		text := fmt.Sprintf(
-			"\n%s\n%s",
-			"点此创建秘钥: https://www.v2ex.com/settings/tokens",
-			m.inputs[0].View(),
-		)
-		b.WriteString(tipStyle.Render(text))
+	panelWidth := min(max(w-8, 32), 76)
+	inputWidth := max(panelWidth-8, 16)
+	compact := h < 30 || w < 50
+	for i := range m.inputs {
+		m.inputs[i].Width = inputWidth
 	}
 
-	if len(m.inputs) > 1 {
-		text := fmt.Sprintf(
-			"\n%s\n默认节点:%s\n%s",
-			"所有节点此处查看: https://v2ex.com/planes (多个节点使用英文逗号隔开, URL 上的 https://v2ex.com/go/{name})",
-			strings.Join(g.MyNodeKeys, ","),
-			m.inputs[1].View(),
-		)
-		b.WriteString(tipStyle.Render(text))
+	header := styles.Title.Render("偏好设置") + "\n" + styles.Meta.Render("连接 V2EX，并选择你想关注的节点")
+	tokenHelp := "可选；配置后启用完整 V2 API 和个人信息，不配置也能公开浏览\n" + terminalLink(tokenSettingsURL, "前往 v2ex.com/settings/tokens 创建令牌 ↗")
+	nodeHelp := wrap.String("多个节点使用英文逗号分隔，例如 programmer,qna,jobs", inputWidth) + "\n" + terminalLink(nodeDirectoryURL, "前往 v2ex.com/planes 查看全部节点 ↗")
+	if compact {
+		header = styles.Title.Render("偏好设置")
+		tokenHelp = terminalLink(tokenSettingsURL, "创建令牌 ↗")
+		nodeLink := terminalLink(nodeDirectoryURL, "查看节点列表 ↗")
+		if w >= 54 {
+			tokenHelp = terminalLink(tokenSettingsURL, "在 v2ex.com/settings/tokens 创建令牌 ↗")
+			nodeLink = terminalLink(nodeDirectoryURL, "前往 v2ex.com/planes 查看全部节点 ↗")
+		}
+		nodeHelp = wrap.String("英文逗号分隔，如 programmer,qna", inputWidth) + "\n" + nodeLink
 	}
+	tokenField := settingField("认证令牌", tokenHelp, m.inputs[0].View(), m.focusIndex == 0, panelWidth)
+	nodeField := settingField("我的节点", nodeHelp, m.inputs[1].View(), m.focusIndex == 1, panelWidth)
 
-	btn1 := &blurredButton
-	// 最后一个 input
+	button := lipgloss.NewStyle().Padding(0, 3).Bold(true).Render("保存设置")
 	if m.focusIndex == len(m.inputs) {
-		btn1 = &focusedButton
+		button = lipgloss.NewStyle().Foreground(styles.Theme.OnAccent).Background(styles.Theme.Accent).Padding(0, 3).Bold(true).Render("保存设置")
+	} else {
+		button = lipgloss.NewStyle().Foreground(styles.Theme.Muted).Background(styles.Theme.Surface).Padding(0, 3).Render("保存设置")
 	}
+	actionHint := "Tab 切换  ·  Enter 确认  ·  F1 配置文件  ·  ` 返回"
+	var actions string
+	if compact {
+		actionHint = "Tab 切换  ·  ` 返回"
+		actions = lipgloss.JoinVertical(lipgloss.Center, button, styles.Meta.Render(actionHint))
+	} else {
+		actions = lipgloss.JoinHorizontal(lipgloss.Center, button, styles.Meta.MarginLeft(2).Render(actionHint))
+	}
+	pathText := styles.Meta.Render(ansi.TruncateWc("配置文件  "+model.ConfigPath(), panelWidth, "…"))
 
-	b.WriteString(tipStyle.Render(fmt.Sprintf("\n%s\n", *btn1)))
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Width(w - 2).
-		Height(h - 4).
-		Padding(1).
-		Render(b.String())
+	content := lipgloss.JoinVertical(lipgloss.Left, header, "", tokenField, "", nodeField, "", actions)
+	if !compact {
+		content = lipgloss.JoinVertical(lipgloss.Left, content, "", pathText)
+	}
+	content = lipgloss.NewStyle().Width(panelWidth).Render(content)
+	return lipgloss.Place(max(w, 1), max(h, 1), lipgloss.Center, lipgloss.Center, content)
+}
+
+func settingField(title, description, input string, active bool, width int) string {
+	borderColor := styles.Theme.Subtle
+	marker := styles.Meta.Render("○")
+	if active {
+		borderColor = styles.Theme.Accent
+		marker = styles.Active.Render("●")
+	}
+	heading := marker + "  " + styles.Title.Render(title)
+	inputBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).BorderForeground(borderColor).
+		Padding(0, 1).
+		Width(max(width-4, 1)).
+		Render(input)
+	return heading + "\n" + styles.Meta.Render(description) + "\n" + inputBox
+}
+
+func terminalLink(url, label string) string {
+	return ansi.SetHyperlink(url) + styles.Active.Underline(true).Render(label) + ansi.ResetHyperlink()
 }

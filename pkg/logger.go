@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -44,15 +45,15 @@ type customLogger struct {
 }
 
 func (l *customLogger) Errorf(format string, v ...interface{}) {
-	l.l.Error(format, v)
+	l.l.Error(fmt.Sprintf(format, v...))
 }
 func (l *customLogger) Warnf(format string, v ...interface{}) {
-	l.l.Warn(format, v)
+	l.l.Warn(fmt.Sprintf(format, v...))
 }
 func (l *customLogger) Infof(format string, v ...interface{}) {
-	l.l.Info(format, v)
+	l.l.Info(fmt.Sprintf(format, v...))
 
 }
 func (l *customLogger) Debugf(format string, v ...interface{}) {
-	l.l.Debug(format, v)
+	l.l.Debug(fmt.Sprintf(format, v...))
 }

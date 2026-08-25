@@ -5,21 +5,21 @@ import (
 )
 
 const (
-	alertInfoColor  = "#2E8B57" // 原#00FF00 → 深绿色(SeaGreen)，降低77%亮度
-	alertErrorColor = "#B22222" // 原#FF0000 → 砖红色(FireBrick)，降低57%亮度
+	alertInfoColor  = "#3CB179"
+	alertErrorColor = "#E05263"
 )
 
 func registerDefaultAlertTypes(m *bubbleup.AlertModel) {
 
 	infoDef := bubbleup.AlertDefinition{
 		Key:       "Info",
-		Prefix:    "♪",
+		Prefix:    "✓",
 		ForeColor: alertInfoColor,
 	}
 	m.RegisterNewAlertType(infoDef)
 	errorDef := bubbleup.AlertDefinition{
 		Key:       "Error",
-		Prefix:    "♫",
+		Prefix:    "!",
 		ForeColor: alertErrorColor,
 	}
 	m.RegisterNewAlertType(errorDef)

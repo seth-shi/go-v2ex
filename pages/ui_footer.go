@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mistakenelf/teacup/statusbar"
 	"github.com/samber/lo"
 	"github.com/seth-shi/go-v2ex/v2/api"
@@ -29,6 +30,7 @@ type FooterComponents struct {
 	loadings map[int]string
 	// 固定文案, 不会修改 (例如用来显示页码)
 	secondText string
+	firstText  string
 	spinner    spinner.Model
 	appVersion string
 
@@ -90,7 +92,7 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 	)
 
 	m.statusBar, cmd = m.statusBar.Update(msg)
-	cmds = append(cmds)
+	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
 	case messages.CheckUpgradeAppRequest:
@@ -104,6 +106,7 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 		delete(m.loadings, msg.ID)
 	case messages.ShowStatusBarTextRequest:
 		m.secondText = msg.HelpText
+		m.firstText = msg.FirstText
 		m.statusBar.FirstColumn = msg.FirstText
 	// 不直接发消息, 因为 msg需要一个延迟, 代理转发
 	case messages.ProxyShowToastRequest:
@@ -146,23 +149,12 @@ func (m FooterComponents) View() string {
 	}
 
 	var (
-		conf       = g.Config.Get()
-		content    strings.Builder
-		w, _       = g.Window.GetSize()
-		secondText = m.GetSecondColumnContent()
+		conf = g.Config.Get()
+		w, _ = g.Window.GetSize()
 	)
 
 	if !conf.ShowFooter() {
 		return ""
-	}
-
-	if conf.ShowLimit() {
-
-		rate := api.V2ex.GetLimitRate()
-		borderWidth := int(math.Round(float64(w) * rate))
-		content.WriteString(strings.Repeat("♡", max(0, borderWidth)))
-		content.WriteString(strings.Repeat("_", max(0, w-borderWidth)))
-		content.WriteString("\n")
 	}
 
 	var name string
@@ -172,14 +164,64 @@ func (m FooterComponents) View() string {
 	} else {
 		name = ref.Name()
 	}
-	m.statusBar.ThirdColumn = fmt.Sprintf("%d-%s", len(nav.Histories()), name)
+	left := m.firstText
+	if loading := m.GetSecondColumnContent(); lipgloss.Width(loading) > 0 {
+		left = loading
+	}
+	if left == "" {
+		left = pageLabel(name)
+	}
 
-	// 这一列有 loading 动画, 需要实时计算
-	m.statusBar.SecondColumn = secondText
-	content.WriteString(m.statusBar.View())
+	if conf.ShowLimit() && w >= 90 {
+		left += fmt.Sprintf("  ·  API %d%%", int(math.Round(api.V2ex.GetLimitRate()*100)))
+	}
+	left = ansi.TruncateWc(left, max(w/3, 8), "…")
+	left = lipgloss.NewStyle().Foreground(styles.Theme.Text).Bold(true).Render(left)
+	hints := footerHints(name, w)
+	gap := max(w-lipgloss.Width(left)-lipgloss.Width(hints)-2, 1)
+	line := " " + left + strings.Repeat(" ", gap) + hints
+	return lipgloss.NewStyle().
+		Background(styles.Theme.Surface).
+		Width(max(w, 1)).
+		Render(ansi.TruncateWc(line, max(w, 1), "…"))
 
-	return content.String()
+}
 
+func footerHints(page string, width int) string {
+	keyText := func(v string) string { return styles.Key.Render(v) }
+	switch page {
+	case "topicPage":
+		if width < 54 {
+			return fmt.Sprintf("%s  %s 打开  %s 设置", keyText("↑↓"), keyText("Enter"), keyText(","))
+		}
+		if width < 76 {
+			return fmt.Sprintf("%s 选择  %s 打开  %s 节点  %s 设置", keyText("↑↓"), keyText("Enter"), keyText("Tab"), keyText(","))
+		}
+		return fmt.Sprintf("%s 选择  %s 打开  %s 翻页  %s 节点  %s 设置  %s 帮助", keyText("↑↓"), keyText("Enter"), keyText("←→"), keyText("Tab"), keyText(","), keyText("?"))
+	case "detailPage":
+		if width < 64 {
+			return fmt.Sprintf("%s 滚动  %s 更多  %s 返回", keyText("↑↓"), keyText("Enter"), keyText("Q"))
+		}
+		return fmt.Sprintf("%s 滚动   %s 加载评论   %s 浏览器打开   %s 返回", keyText("↑↓"), keyText("Enter"), keyText("F1"), keyText("Q"))
+	default:
+		if width < 54 {
+			return fmt.Sprintf("%s 返回  %s 设置  %s 退出", keyText("Q"), keyText("`"), keyText("Esc"))
+		}
+		return fmt.Sprintf("%s 返回   %s 设置   %s 帮助   %s 退出", keyText("Q"), keyText("`"), keyText("?"), keyText("Esc"))
+	}
+}
+
+func pageLabel(page string) string {
+	switch page {
+	case "topicPage":
+		return "主题"
+	case "detailPage":
+		return "详情"
+	case "splashPage":
+		return "正在启动"
+	default:
+		return "Go V2EX"
+	}
 }
 
 func (m FooterComponents) GetSecondColumnContent() string {
@@ -190,15 +232,14 @@ func (m FooterComponents) GetSecondColumnContent() string {
 		loadingText strings.Builder
 	)
 	slices.Sort(loadingKeys)
-
-	lo.ForEach(
-		loadingKeys, func(key int, index int) {
-			loadingText.WriteString(" ")
-			loadingText.WriteString(loadingIcon)
-			loadingText.WriteString(" ")
-			loadingText.WriteString(m.loadings[key])
-		},
-	)
-
-	return styles.Hint.Render(loadingText.String(), m.secondText)
+	if len(loadingKeys) == 0 {
+		return styles.Hint.Render(m.secondText)
+	}
+	loadingText.WriteString(loadingIcon)
+	loadingText.WriteString(" ")
+	loadingText.WriteString(m.loadings[loadingKeys[0]])
+	if len(loadingKeys) > 1 {
+		loadingText.WriteString(fmt.Sprintf("  · 另有 %d 项", len(loadingKeys)-1))
+	}
+	return styles.Hint.Render(loadingText.String())
 }

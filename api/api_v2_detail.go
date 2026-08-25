@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +12,13 @@ import (
 
 func (cli *v2exClient) GetDetail(ctx context.Context, id int64) tea.Cmd {
 	return func() tea.Msg {
+		if !hasAuthToken() {
+			res, err := cli.getPublicDetail(ctx, id)
+			if err != nil {
+				return errorWrapper("详情", err)
+			}
+			return messages.GetDetailResponse{Data: res}
+		}
 
 		var res response.V2Detail
 		_, err := cli.client.R().
@@ -18,7 +26,11 @@ func (cli *v2exClient) GetDetail(ctx context.Context, id int64) tea.Cmd {
 			SetResult(&res).
 			Get(fmt.Sprintf("/api/v2/topics/%d", id))
 		if err != nil {
-			return errorWrapper("详情", err)
+			fallback, fallbackErr := cli.getPublicDetail(ctx, id)
+			if fallbackErr == nil {
+				return messages.GetDetailResponse{Data: fallback}
+			}
+			return errorWrapper("详情", errors.Join(err, fallbackErr))
 		}
 
 		return messages.GetDetailResponse{Data: res.Result}
