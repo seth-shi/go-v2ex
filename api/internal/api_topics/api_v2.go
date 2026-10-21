@@ -36,8 +36,10 @@ type V2TopicApi struct {
 }
 
 type v2Resp struct {
-	Total  int
-	Result []response.TopicResult
+	NodeKey  string
+	PageInfo response.V2PageResponse
+	Total    int
+	Result   []response.TopicResult
 }
 
 func NewV2(client *resty.Client) *V2TopicApi {
@@ -67,13 +69,16 @@ func (api *V2TopicApi) GetTopicsByGroupNode(
 	}
 
 	// 如果有存储了最大条数, 并且当前页码超过, 那么直接返回无数据
-	endIndex := (page-1)*perPage + perPage - 1
-	if len(api.cacheData) < endIndex {
+	endIndex := page * perPage
+	for len(api.cacheData) < endIndex {
 		// 如果没有缓存, 或者当前页码数据不在缓存中, 那么去从接口聚合获取
 		var result []response.TopicResult
-		result, err = api.groupRequestData(node)
+		result, err = api.groupRequestData(ctx, node)
 		if err != nil {
 			return
+		}
+		if len(result) == 0 {
+			break
 		}
 
 		// 组装数据存到缓存中
@@ -92,6 +97,9 @@ func (api *V2TopicApi) prepareRequest(node g.GroupNode, page int) error {
 	if node.Key != api.cacheNode {
 		api.cacheData = nil
 		api.cacheNode = node.Key
+		api.groupTotalCount.Clear()
+		api.nodePageInfoState.Clear()
+		api.cursorPageState.Clear()
 	}
 
 	return nil
@@ -106,13 +114,12 @@ func (api *V2TopicApi) finishRequest(err *error) {
 	}
 }
 
-func (api *V2TopicApi) groupRequestData(groupNode g.GroupNode) (
+func (api *V2TopicApi) groupRequestData(ctx context.Context, groupNode g.GroupNode) (
 	[]response.TopicResult,
 	error,
 ) {
 	// 并发获取子节点的数据
 	var (
-		ctx      = context.Background()
 		chResult = make(chan *v2Resp)
 		chError  = make(chan error, 1)
 		eg       errgroup.Group
@@ -147,10 +154,12 @@ func (api *V2TopicApi) groupRequestData(groupNode g.GroupNode) (
 
 	// 数据合并到一个数组里, 分页参数累加
 	var (
-		total   int
-		results []response.TopicResult
+		total     int
+		results   []response.TopicResult
+		responses []*v2Resp
 	)
 	for res := range chResult {
+		responses = append(responses, res)
 		total += res.Total
 		results = append(results, res.Result...)
 		slog.Info(
@@ -161,6 +170,17 @@ func (api *V2TopicApi) groupRequestData(groupNode g.GroupNode) (
 	// 等待所有任务完成, 并返回可能出错的结果
 	if err := <-chError; err != nil {
 		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	// A group is one cache batch. Commit every child cursor together only
+	// after the entire batch succeeds; otherwise a retry would skip a peer's
+	// successfully fetched page even though its results were discarded.
+	for _, res := range responses {
+		api.cursorPageState.Store(res.NodeKey, res.PageInfo.CurrPage)
+		api.nodePageInfoState.Store(res.NodeKey, res.PageInfo)
 	}
 
 	// 如果已经有了 key, 那么就不存储, 防止分页到后面无法获取数据
@@ -184,7 +204,7 @@ func (api *V2TopicApi) requestV2Topics(
 ) {
 
 	// 请求下一页
-	apiPage, _ := api.cursorPageState.LoadOrStore(nodeKey, 0)
+	apiPage, _ := api.cursorPageState.Load(nodeKey)
 	apiPage++
 
 	// 把官方分页参数存储起来
@@ -211,14 +231,13 @@ func (api *V2TopicApi) requestV2Topics(
 		return nil, err
 	}
 
-	// 如果返回了最大页数, 那么返回给前端, 方便后续缓存获取
-	api.cursorPageState.Store(nodeKey, apiPage)
-	// 存储分页信息
+	// Keep candidate pagination local until every peer in the batch succeeds.
 	v2Res.Pagination.CurrPage = apiPage
-	api.nodePageInfoState.Store(nodeKey, v2Res.Pagination)
 
 	res := &v2Resp{
-		Total: v2Res.Pagination.TotalCount,
+		NodeKey:  nodeKey,
+		PageInfo: v2Res.Pagination,
+		Total:    v2Res.Pagination.TotalCount,
 		Result: lo.Map(
 			v2Res.Result, func(item response.V2TopicResult, index int) response.TopicResult {
 				return response.TopicResult{

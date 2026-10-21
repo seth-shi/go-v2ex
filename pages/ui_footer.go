@@ -105,6 +105,12 @@ func (m FooterComponents) Update(msg tea.Msg) (FooterComponents, tea.Cmd) {
 	case messages.EndLoading:
 		delete(m.loadings, msg.ID)
 	case messages.ShowStatusBarTextRequest:
+		if msg.Page != "" {
+			current := reflect.TypeOf(nav.CurrentPage())
+			if current == nil || current.Name() != msg.Page {
+				return m, nil
+			}
+		}
 		m.secondText = msg.HelpText
 		m.firstText = msg.FirstText
 		m.statusBar.FirstColumn = msg.FirstText
@@ -175,9 +181,12 @@ func (m FooterComponents) View() string {
 	if conf.ShowLimit() && w >= 90 {
 		left += fmt.Sprintf("  ·  API %d%%", int(math.Round(api.V2ex.GetLimitRate()*100)))
 	}
-	left = ansi.TruncateWc(left, max(w/3, 8), "…")
+	// Reserve room for the current page's actions before laying out status text.
+	// Truncating the finished line used to hide the rightmost shortcuts.
+	leftWidth := min(lipgloss.Width(left), max(w/4, 0))
+	hints := footerHints(name, max(w-leftWidth-3, 0))
+	left = ansi.TruncateWc(left, max(w-lipgloss.Width(hints)-3, 0), "…")
 	left = lipgloss.NewStyle().Foreground(styles.Theme.Text).Bold(true).Render(left)
-	hints := footerHints(name, w)
 	gap := max(w-lipgloss.Width(left)-lipgloss.Width(hints)-2, 1)
 	line := " " + left + strings.Repeat(" ", gap) + hints
 	return lipgloss.NewStyle().
@@ -188,26 +197,48 @@ func (m FooterComponents) View() string {
 }
 
 func footerHints(page string, width int) string {
-	keyText := func(v string) string { return styles.Key.Render(v) }
+	hint := func(k, description string) string {
+		return styles.Key.Render(k) + " " + description
+	}
+	join := func(items ...string) string { return strings.Join(items, "  ") }
+	fit := func(variants ...string) string {
+		for _, variant := range variants {
+			if lipgloss.Width(variant) <= width {
+				return variant
+			}
+		}
+		return ansi.TruncateWc(styles.Key.Render("?"), max(width, 0), "")
+	}
 	switch page {
 	case "topicPage":
-		if width < 54 {
-			return fmt.Sprintf("%s  %s 打开  %s 设置", keyText("↑↓"), keyText("Enter"), keyText(","))
-		}
-		if width < 76 {
-			return fmt.Sprintf("%s 选择  %s 打开  %s 节点  %s 设置", keyText("↑↓"), keyText("Enter"), keyText("Tab"), keyText(","))
-		}
-		return fmt.Sprintf("%s 选择  %s 打开  %s 翻页  %s 节点  %s 设置  %s 帮助", keyText("↑↓"), keyText("Enter"), keyText("←→"), keyText("Tab"), keyText(","), keyText("?"))
+		return fit(
+			join(hint("↑↓", "选择"), hint("Enter", "打开"), hint("←→", "翻页"), hint("Tab", "节点"), hint("Ctrl+R", "刷新"), hint("v", "历史"), hint(",", "设置"), hint("?", "帮助")),
+			join(styles.Key.Render("↑↓"), hint("Enter", "打开"), hint("←→", "翻页"), hint("Tab", "节点"), hint("Ctrl+R", "刷新"), hint("v", "历史"), hint(",", "设置")),
+			join(styles.Key.Render("↑↓"), hint("Enter", "打开"), hint("Ctrl+R", "刷新"), hint("v", "历史"), hint(",", "设置")),
+			join(hint("Enter", "打开"), hint("Ctrl+R", "刷新"), hint("v", "历史")),
+			styles.Key.Render("Enter")+"打开 "+styles.Key.Render("Ctrl+R")+"刷新 "+styles.Key.Render("v")+"历史",
+			hint("Enter", "打开"),
+		)
 	case "detailPage":
-		if width < 64 {
-			return fmt.Sprintf("%s 滚动  %s 更多  %s 返回", keyText("↑↓"), keyText("Enter"), keyText("Q"))
-		}
-		return fmt.Sprintf("%s 滚动   %s 加载评论   %s 浏览器打开   %s 返回", keyText("↑↓"), keyText("Enter"), keyText("F1"), keyText("Q"))
+		return fit(
+			join(hint("↑↓", "滚动"), hint("Enter", "加载评论"), hint("Ctrl+R", "刷新"), hint("r", "解码"), hint("F1", "浏览器"), hint("v", "历史"), hint("Q", "返回")),
+			join(styles.Key.Render("↑↓"), hint("Enter", "评论"), hint("Ctrl+R", "刷新"), hint("F1", "打开"), hint("Q", "返回")),
+			join(hint("Enter", "更多"), hint("Ctrl+R", "重试"), hint("Q", "返回")),
+			join(styles.Key.Render("↑↓"), hint("Enter", "更多"), hint("Q", "返回")),
+			hint("Q", "返回"),
+		)
+	case "historyPage":
+		return fit(
+			join(hint("↑↓", "选择"), hint("Enter", "打开"), hint("Q", "返回")),
+			join(styles.Key.Render("↑↓"), hint("Enter", "打开"), hint("Q", "返回")),
+			hint("Q", "返回"),
+		)
 	default:
-		if width < 54 {
-			return fmt.Sprintf("%s 返回  %s 设置  %s 退出", keyText("Q"), keyText("`"), keyText("Esc"))
-		}
-		return fmt.Sprintf("%s 返回   %s 设置   %s 帮助   %s 退出", keyText("Q"), keyText("`"), keyText("?"), keyText("Esc"))
+		return fit(
+			join(hint("Q", "返回"), hint(",", "设置"), hint("?", "帮助"), hint("Esc", "退出")),
+			join(hint("Q", "返回"), hint("?", "帮助")),
+			hint("Q", "返回"),
+		)
 	}
 }
 
@@ -217,6 +248,8 @@ func pageLabel(page string) string {
 		return "主题"
 	case "detailPage":
 		return "详情"
+	case "historyPage":
+		return "浏览历史"
 	case "splashPage":
 		return "正在启动"
 	default:

@@ -25,6 +25,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/seth-shi/go-v2ex/v2/messages"
+	"github.com/seth-shi/go-v2ex/v2/model"
 )
 
 var (
@@ -32,9 +33,17 @@ var (
 )
 
 type detailPage struct {
-	id        int64
-	viewport  viewport.Model
-	decodeMap map[string]string
+	id               int64
+	viewport         viewport.Model
+	decodeMap        map[string]string
+	requestID        uint64
+	replyRequestID   uint64
+	loading          bool
+	replyLoading     bool
+	loadErr          error
+	replyErr         error
+	pendingReplyPage int
+	replacingReplies bool
 
 	replyPageInfo response.V2PageResponse
 	contentDetail response.V2DetailResult
@@ -44,7 +53,7 @@ type detailPage struct {
 func (m detailPage) OnEntering() (tea.Model, tea.Cmd) {
 	// 获取内容 + 第一页的评论
 	var (
-		w, h = g.Window.GetSize()
+		w, h = pageSize()
 	)
 	m.viewport.Width = w
 	m.viewport.Height = max(h-lipgloss.Height(m.headerView())-1, 1)
@@ -53,11 +62,28 @@ func (m detailPage) OnEntering() (tea.Model, tea.Cmd) {
 	m.viewport.KeyMap.Down = consts.AppKeyMap.Down
 	m.viewport.KeyMap.Left = consts.AppKeyMap.Left
 	m.viewport.KeyMap.Right = consts.AppKeyMap.Right
-	return m, nil
+	if m.contentDetail.Id > 0 {
+		m.refreshContent()
+	}
+	return m, m.statusCommand()
 }
 
 func (m detailPage) OnLeaving() (tea.Model, tea.Cmd) {
 	return m, nil
+}
+
+func (m detailPage) AcceptsMessage(msg tea.Msg) bool {
+	switch msg := msg.(type) {
+	case messages.GetDetailResponse:
+		return msg.TopicID == m.id && msg.RequestID == m.requestID
+	case messages.GetReplyResponse:
+		return msg.TopicID == m.id && msg.RequestID == m.replyRequestID
+	case messages.DecodeDetailContentResult:
+		return msg.TopicID == m.id && msg.RequestID == m.requestID
+	case messages.RequestError:
+		return msg.TopicID == m.id && ((msg.Kind == messages.RequestDetail && msg.RequestID == m.requestID) || (msg.Kind == messages.RequestReplies && msg.RequestID == m.replyRequestID))
+	}
+	return false
 }
 
 func newDetailPage(id int64) detailPage {
@@ -65,15 +91,13 @@ func newDetailPage(id int64) detailPage {
 		id:        id,
 		decodeMap: make(map[string]string),
 		viewport:  viewport.New(40, 40),
+		requestID: nextRequestID(),
+		loading:   true,
 	}
 }
 
 func (m detailPage) Init() tea.Cmd {
-	return tea.Batch(
-		commands.
-			LoadingRequestDetail.
-			Run(api.V2ex.GetDetail(context.Background(), m.id)),
-	)
+	return api.V2ex.GetDetail(context.Background(), m.id, m.requestID)
 }
 
 func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -85,38 +109,115 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.viewport.Width = max(msg.Width, 1)
-		m.viewport.Height = max(msg.Height-lipgloss.Height(m.headerView())-1, 1)
+		_, height := pageSize()
+		m.viewport.Height = max(height-lipgloss.Height(m.headerView())-1, 1)
 		if m.contentDetail.Id > 0 {
-			cmds = append(cmds, m.renderContent())
+			m.refreshContent()
 		}
 	case messages.GetDetailResponse:
-		m.contentDetail = msg.Data
-		cmds = append(cmds, m.renderContent())
-		if m.contentDetail.Replies > 0 {
-			cmds = append(cmds, m.getReply())
+		if msg.TopicID != m.id || msg.RequestID != m.requestID {
+			return m, nil
 		}
+		m.loading = false
+		if msg.Data.Id != m.id {
+			m.loadErr = errors.New("接口未返回主题内容")
+			return m, nil
+		}
+		m.loadErr = nil
+		m.contentDetail = msg.Data
+		m.decodeMap = make(map[string]string)
+		m.replyErr = nil
+		if m.contentDetail.Replies > 0 {
+			m.replacingReplies = true
+			cmds = append(cmds, m.startReply(1))
+		} else {
+			m.contentReply = nil
+			m.replyPageInfo = response.V2PageResponse{}
+			m.replyLoading = false
+		}
+		m.refreshContent()
+		detail := m.contentDetail
+		cmds = append(cmds, func() tea.Msg {
+			err := g.History.Record(model.HistoryEntry{TopicID: detail.Id, Title: cleanLine(detail.Title), Node: cleanLine(detail.Node.Title), Author: cleanLine(detail.Member.Username), URL: detail.Url})
+			return historyUpdated{Err: err}
+		}, m.statusCommand())
 	case messages.GetReplyResponse:
+		if msg.TopicID != m.id || msg.RequestID != m.replyRequestID {
+			return m, nil
+		}
+		m.replyLoading, m.replyErr = false, nil
+		if m.replacingReplies {
+			m.contentReply = nil
+			m.replacingReplies = false
+		}
 		m.replyPageInfo = msg.Data.Pagination
-		m.contentReply = append(m.contentReply, msg.Data.Result...)
-		cmds = append(cmds, m.renderContent())
+		m.contentReply = appendUniqueReplies(m.contentReply, msg.Data.Result)
+		m.refreshContent()
+		cmds = append(cmds, m.statusCommand())
+	case messages.RequestError:
+		if msg.TopicID != m.id {
+			return m, nil
+		}
+		switch {
+		case msg.Kind == messages.RequestDetail && msg.RequestID == m.requestID:
+			m.loading, m.loadErr = false, msg.Err
+		case msg.Kind == messages.RequestReplies && msg.RequestID == m.replyRequestID:
+			m.replyLoading, m.replyErr = false, msg.Err
+		default:
+			return m, nil
+		}
+		if m.contentDetail.Id > 0 {
+			m.refreshContent()
+		}
 	case messages.DecodeDetailContentResult:
+		if msg.TopicID != m.id || msg.RequestID != m.requestID {
+			return m, nil
+		}
 		m.decodeMap = lo.Assign(m.decodeMap, msg.Result)
-		cmds = append(cmds, m.renderContent())
-	case messages.RenderDetailContentResult:
-		m.viewport.SetContent(msg.Content)
+		m.refreshContent()
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, consts.AppKeyMap.Refresh):
+			if m.loading {
+				return m, nil
+			}
+			if m.replyErr != nil && m.loadErr == nil {
+				cmd := m.startReply(m.pendingReplyPage)
+				m.refreshContent()
+				return m, cmd
+			}
+			m.loading, m.loadErr = true, nil
+			m.requestID = nextRequestID()
+			m.replyRequestID = nextRequestID()
+			m.replyLoading = false
+			return m, api.V2ex.GetDetail(context.Background(), m.id, m.requestID)
 		case key.Matches(msg, consts.AppKeyMap.KeyE):
+			if m.contentDetail.Id == 0 || m.loading || m.replyLoading {
+				return m, nil
+			}
+			if m.replyErr != nil {
+				cmd := m.startReply(m.pendingReplyPage)
+				m.refreshContent()
+				return m, cmd
+			}
 			if m.contentDetail.Replies == 0 || (m.replyPageInfo.TotalPages > 0 && m.replyPageInfo.CurrPage >= m.replyPageInfo.TotalPages) {
 				return m, commands.Post(errors.New("已无更多评论"))
 			}
 			if m.replyPageInfo.CurrPage == 0 {
 				return m, commands.Post(errors.New("评论正在加载中"))
 			}
-			return m, m.getReply()
+			cmd := m.startReply(m.replyPageInfo.CurrPage + 1)
+			m.refreshContent()
+			return m, cmd
 		case key.Matches(msg, consts.AppKeyMap.KeyR):
+			if m.contentDetail.Id == 0 || m.loading {
+				return m, nil
+			}
 			return m.decodeContent()
 		case key.Matches(msg, consts.AppKeyMap.F1):
+			if m.contentDetail.Url == "" {
+				return m, nil
+			}
 			return m, func() tea.Msg {
 				return browser.OpenURL(m.contentDetail.Url)
 			}
@@ -129,30 +230,36 @@ func (m detailPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m detailPage) View() string {
-
+	w, h := pageSize()
 	if m.contentDetail.Id == 0 {
-		return loadingView(fmt.Sprintf("[%d]主题正在加载中...", m.id))
+		if m.loadErr != nil {
+			return requestErrorView("主题加载失败", m.loadErr, w, h)
+		}
+		return loadingViewWithin(fmt.Sprintf("正在加载主题 #%d", m.id), w, h)
 	}
-
-	return fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View())
+	return fitPage(fmt.Sprintf("%s\n%s", m.headerView(), m.viewport.View()), w, h)
 }
 
 func (m detailPage) headerView() string {
 	terminalWidth := max(m.viewport.Width, 1)
-	w := min(max(terminalWidth-6, 24), 92)
+	w := readingWidth(terminalWidth)
 	var p float64
 	if m.contentDetail.Id > 0 {
 		p = m.viewport.ScrollPercent() * 100
 	}
 	labelText := fmt.Sprintf("%3.f%%", p)
-	label := styles.Meta.Render(labelText)
-	crumb := m.contentDetail.Node.Title
-	if m.contentDetail.Title != "" {
-		crumb += "  /  " + m.contentDetail.Title
+	if m.loading {
+		labelText = "刷新中"
 	}
-	crumb = ansi.TruncateWc(crumb, max(w-lipgloss.Width(labelText)-3, 6), "…")
-	gap := max(w-lipgloss.Width(crumb)-lipgloss.Width(labelText)-2, 1)
-	top := styles.Title.Render(crumb) + strings.Repeat(" ", gap) + label
+	if m.loadErr != nil {
+		labelText = "Ctrl+R 重试"
+	}
+	label := styles.Meta.Render(labelText)
+	crumb := cleanLine(m.contentDetail.Node.Title)
+	if m.contentDetail.Title != "" {
+		crumb += "  /  " + cleanLine(m.contentDetail.Title)
+	}
+	top := joinEdges(styles.Title.Render(crumb), label, w)
 	trackWidth := w
 	filled := min(trackWidth, max(0, int(math.Round(float64(trackWidth)*p/100))))
 	track := styles.Active.Render(strings.Repeat("━", filled)) + styles.Divider.Render(strings.Repeat("─", trackWidth-filled))
@@ -160,27 +267,43 @@ func (m detailPage) headerView() string {
 	return lipgloss.PlaceHorizontal(terminalWidth, lipgloss.Center, header)
 }
 
-func (m detailPage) getReply() tea.Cmd {
-	// 默认第 0 页
-	page := m.replyPageInfo.CurrPage + 1
-	return commands.
-		LoadingRequestReply.
-		Run(api.V2ex.GetReply(context.Background(), m.id, page))
+func (m *detailPage) startReply(page int) tea.Cmd {
+	m.pendingReplyPage = max(page, 1)
+	m.replyLoading, m.replyErr = true, nil
+	m.replyRequestID = nextRequestID()
+	return api.V2ex.GetReply(context.Background(), m.id, m.pendingReplyPage, m.replyRequestID)
 }
-
-func (m detailPage) renderContent() tea.Cmd {
-
-	return tea.Batch(
-		func() tea.Msg {
-			return messages.RenderDetailContentResult{Content: m.buildContent()}
-		},
-		commands.Post(messages.ShowStatusBarTextRequest{FirstText: m.replyPageInfo.ToString("0 评论")}),
-	)
+func (m *detailPage) refreshContent() {
+	offset := m.viewport.YOffset
+	m.viewport.SetContent(m.buildContent())
+	m.viewport.SetYOffset(offset)
+}
+func (m detailPage) statusCommand() tea.Cmd {
+	return commands.Post(messages.ShowStatusBarTextRequest{Page: "detailPage", FirstText: m.replyPageInfo.ToString("0 评论")})
+}
+func readingWidth(width int) int { return min(max(width-4, 1), 88) }
+func appendUniqueReplies(existing, incoming []response.V2ReplyResult) []response.V2ReplyResult {
+	seen := make(map[int]bool)
+	for _, r := range existing {
+		if r.Id > 0 {
+			seen[r.Id] = true
+		}
+	}
+	for _, r := range incoming {
+		if r.Id > 0 && seen[r.Id] {
+			continue
+		}
+		existing = append(existing, r)
+		if r.Id > 0 {
+			seen[r.Id] = true
+		}
+	}
+	return existing
 }
 func (m detailPage) buildContent() string {
 	var (
 		terminalWidth, _ = g.Window.GetSize()
-		w                = min(max(terminalWidth-6, 24), 92)
+		w                = readingWidth(terminalWidth)
 		content          strings.Builder
 		me               = g.Me.Get()
 		decodeItems      []string
@@ -263,6 +386,10 @@ func (m detailPage) buildContent() string {
 func (m detailPage) replyStatus(width int) string {
 	var text string
 	switch {
+	case m.replyErr != nil:
+		text = "评论加载失败 · Enter 或 Ctrl+R 重试"
+	case m.replyLoading:
+		text = fmt.Sprintf("正在加载评论… · 已保留 %d 条", len(m.contentReply))
 	case m.contentDetail.Replies == 0:
 		text = "暂无回复"
 	case m.replyPageInfo.CurrPage == 0:
@@ -276,7 +403,7 @@ func (m detailPage) replyStatus(width int) string {
 		Foreground(styles.Theme.Muted).
 		Background(styles.Theme.Surface).
 		Align(lipgloss.Center).
-		Width(width).
+		Width(max(width-2, 1)).
 		Padding(0, 1).
 		Render(text)
 }
@@ -295,7 +422,7 @@ func (m detailPage) decodeContent() (tea.Model, tea.Cmd) {
 					keys       = lo.Keys(m.decodeMap)
 					urls       = pkg.ExtractImgURLs(content)
 					diffUrl    = lo.Without(urls, keys...)
-					width      = min(max(w-6, 24), 92)
+					width      = readingWidth(w)
 					replaceMap = make(map[string]string)
 					imageStyle = styles.
 							Border.
@@ -328,7 +455,9 @@ func (m detailPage) decodeContent() (tea.Model, tea.Cmd) {
 				}
 
 				return messages.DecodeDetailContentResult{
-					Result: replaceMap,
+					TopicID:   m.id,
+					RequestID: m.requestID,
+					Result:    replaceMap,
 				}
 			},
 		)

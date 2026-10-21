@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
+	"github.com/seth-shi/go-v2ex/v2/api/internal/api_topics"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
 	"github.com/seth-shi/go-v2ex/v2/messages"
@@ -17,11 +18,27 @@ import (
 func (cli *v2exClient) GetTopics(
 	ctx context.Context,
 	page int,
+	ids ...uint64,
 ) tea.Cmd {
+	return cli.GetTopicsForNode(ctx, g.GetGroupNode(g.Config.Get().ActiveTab), page, requestID(ids), false)
+}
 
+// GetTopicsFresh bypasses both API cache generations, including V2 cursors.
+func (cli *v2exClient) GetTopicsFresh(ctx context.Context, page int, ids ...uint64) tea.Cmd {
+	return cli.GetTopicsForNode(ctx, g.GetGroupNode(g.Config.Get().ActiveTab), page, requestID(ids), true)
+}
+
+// GetTopicsForNode captures a navigation target before the command runs.
+func (cli *v2exClient) GetTopicsForNode(ctx context.Context, node g.GroupNode, page int, id uint64, fresh bool) tea.Cmd {
+	node.Nodes = append([]string(nil), node.Nodes...)
 	return func() tea.Msg {
+		cli.topicsMu.Lock()
+		defer cli.topicsMu.Unlock()
+		if fresh {
+			cli.v1TopicApi = api_topics.NewV1(cli.client)
+			cli.v2TopicApi = api_topics.NewV2(cli.client)
+		}
 		var (
-			node       = g.GetGroupNode(g.Config.Get().ActiveTab)
 			res        []response.TopicResult
 			total      int
 			cachePages = -1
@@ -33,18 +50,20 @@ func (cli *v2exClient) GetTopics(
 			var err error
 			res, total, err = cli.v1TopicApi.GetTopicsByGroupNode(ctx, node, page)
 			if err != nil {
-				return errorWrapper("主题", err)
+				return messages.RequestError{Kind: messages.RequestTopics, NodeKey: node.Key, RequestID: id, Page: page, Err: errorWrapper("主题", err)}
 			}
 		} else {
 			var err error
 			res, cachePages, total, err = cli.getHybridTopics(ctx, node, page)
 			if err != nil {
-				return errorWrapper("主题", err)
+				return messages.RequestError{Kind: messages.RequestTopics, NodeKey: node.Key, RequestID: id, Page: page, Err: errorWrapper("主题", err)}
 			}
 		}
 
 		return messages.GetTopicResponse{
-			Data: res,
+			NodeKey:   node.Key,
+			RequestID: id,
+			Data:      res,
 			PageInfo: &response.PerTenPageInfo{
 				TotalCount: total,
 				CurrPage:   page,

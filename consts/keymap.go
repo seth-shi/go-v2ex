@@ -22,6 +22,8 @@ type KeyMap struct {
 	KeyE           key.Binding
 	SwitchShowMode key.Binding
 	KeyR           key.Binding
+	Refresh        key.Binding
+	History        key.Binding
 	UpgradeApp     key.Binding
 	F1             key.Binding
 }
@@ -37,7 +39,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{
 			k.Up, k.Down, k.Left, k.Right,
 			k.Tab, k.ShiftTab,
-			k.KeyE, k.KeyR, k.F1,
+			k.KeyE, k.Refresh, k.History, k.KeyR, k.F1,
 		}, // first column
 		{
 			k.KeyQ, k.CtrlQuit, k.HelpPage, k.SettingPage,
@@ -117,6 +119,14 @@ var AppKeyMap = KeyMap{
 	KeyR: key.NewBinding(
 		key.WithKeys("r"),
 		key.WithHelp("r", fmt.Sprintf("%s解码内容(图片/base64)", detailPageTitle)),
+	),
+	Refresh: key.NewBinding(
+		key.WithKeys("ctrl+r"),
+		key.WithHelp("ctrl+r", "[主题/详情页]刷新内容或重试请求"),
+	),
+	History: key.NewBinding(
+		key.WithKeys("v"),
+		key.WithHelp("v", "[主题/详情页]打开本地浏览历史"),
 	),
 	UpgradeApp: key.NewBinding(
 		key.WithKeys("u"),

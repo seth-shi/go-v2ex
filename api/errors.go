@@ -25,5 +25,12 @@ func errorWrapper(prefix string, err error) error {
 		err = ErrRequestCanceled
 	}
 
-	return fmt.Errorf("请求%s错误:%s", prefix, err)
+	return fmt.Errorf("请求%s错误:%w", prefix, err)
+}
+
+func requestID(ids []uint64) uint64 {
+	if len(ids) == 0 {
+		return 0
+	}
+	return ids[0]
 }

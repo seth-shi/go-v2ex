@@ -4,8 +4,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/seth-shi/go-v2ex/v2/commands"
 	"github.com/seth-shi/go-v2ex/v2/consts"
 	"github.com/seth-shi/go-v2ex/v2/g"
+	"github.com/seth-shi/go-v2ex/v2/messages"
 	"github.com/seth-shi/go-v2ex/v2/nav"
 	"go.dalton.dog/bubbleup"
 )
@@ -48,11 +50,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	)
 
 	switch msg := msg.(type) {
+	case messages.RequestError:
+		return m, nav.Update(msg)
+	case historyUpdated:
+		if msg.Err != nil {
+			cmds = append(cmds, commands.AlertError(msg.Err))
+		}
 	case tea.WindowSizeMsg:
 		g.Window.SetSize(msg)
 		m.alert = newAlertModel(msg.Width - 2)
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, consts.AppKeyMap.History):
+			switch nav.CurrentPage().(type) {
+			case topicPage, detailPage, historyPage:
+				return m, nav.PushOrBack(newHistoryPage())
+			}
 		case key.Matches(msg, consts.AppKeyMap.Space):
 			cmds = append(cmds, nav.PushOrBack(newBossPage()))
 		case key.Matches(msg, consts.AppKeyMap.HelpPage):
@@ -97,7 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 
 	var (
-		_, h = g.Window.GetSize()
+		w, h = g.Window.GetSize()
 	)
 
 	var (
@@ -106,13 +119,14 @@ func (m Model) View() string {
 		body         = lipgloss.
 				NewStyle().
 				Height(max(h-footerHeight, 1)).
+				MaxHeight(max(h-footerHeight, 1)).
+				MaxWidth(max(w, 1)).
 				Render(nav.View())
-		content = lipgloss.JoinVertical(
-			lipgloss.Top,
-			body,
-			footer,
-		)
+		content = body
 	)
+	if footer != "" {
+		content = lipgloss.JoinVertical(lipgloss.Top, body, footer)
+	}
 
 	return m.alert.Render(content)
 }

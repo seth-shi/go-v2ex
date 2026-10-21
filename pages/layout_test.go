@@ -40,7 +40,7 @@ func TestTopicPageFitsCommonTerminalWidths(t *testing.T) {
 	}
 }
 
-func TestTopicTableKeepsImportantMetadata(t *testing.T) {
+func TestTopicListKeepsImportantMetadata(t *testing.T) {
 	page := newTopicPage()
 	page.loading = false
 	page.topics = []response.TopicResult{{
@@ -52,14 +52,15 @@ func TestTopicTableKeepsImportantMetadata(t *testing.T) {
 		Member:      response.MemberResult{Username: "seth"},
 	}}
 
-	view := page.renderTopicTable(100, 0)
-	require.Contains(t, view, "用户")
+	g.Window.SetSize(tea.WindowSizeMsg{Width: 100, Height: 30})
+	view := page.renderTopics(24)
+	require.Contains(t, view, "程序员")
 	require.Contains(t, view, "seth")
 	require.NotContains(t, view, "浏览")
 
 	page.topics[0].Member = response.MemberResult{}
 	page.topics[0].LastReplyBy = "reply_user"
-	fallbackView := page.renderTopicTable(100, 0)
+	fallbackView := page.renderTopics(24)
 	require.Contains(t, fallbackView, "↩ reply_user")
 }
 

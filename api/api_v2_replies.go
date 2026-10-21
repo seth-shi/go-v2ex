@@ -10,14 +10,15 @@ import (
 	"github.com/seth-shi/go-v2ex/v2/response"
 )
 
-func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.Cmd {
+func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int, ids ...uint64) tea.Cmd {
+	reqID := requestID(ids)
 	return func() tea.Msg {
 		if !hasAuthToken() {
 			res, err := cli.getPublicReplies(ctx, id, page)
 			if err != nil {
-				return errorWrapper("回复", err)
+				return messages.RequestError{Kind: messages.RequestReplies, TopicID: id, RequestID: reqID, Page: page, Err: errorWrapper("回复", err)}
 			}
-			return messages.GetReplyResponse{Data: res}
+			return messages.GetReplyResponse{TopicID: id, RequestID: reqID, Page: page, Data: res}
 		}
 
 		var res response.V2ReplyResponse
@@ -29,14 +30,17 @@ func (cli *v2exClient) GetReply(ctx context.Context, id int64, page int) tea.Cmd
 		if err != nil {
 			fallback, fallbackErr := cli.getPublicReplies(ctx, id, page)
 			if fallbackErr == nil {
-				return messages.GetReplyResponse{Data: fallback}
+				return messages.GetReplyResponse{TopicID: id, RequestID: reqID, Page: page, Data: fallback}
 			}
-			return errorWrapper("回复", errors.Join(err, fallbackErr))
+			return messages.RequestError{Kind: messages.RequestReplies, TopicID: id, RequestID: reqID, Page: page, Err: errorWrapper("回复", errors.Join(err, fallbackErr))}
 		}
 
 		res.Pagination.CurrPage = page
 		return messages.GetReplyResponse{
-			Data: res,
+			TopicID:   id,
+			RequestID: reqID,
+			Page:      page,
+			Data:      res,
 		}
 	}
 }

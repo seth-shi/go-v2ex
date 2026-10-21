@@ -2,6 +2,7 @@ package api
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/seth-shi/go-v2ex/v2/api/internal/api_topics"
 	"github.com/seth-shi/go-v2ex/v2/g"
@@ -19,6 +20,9 @@ var (
 )
 
 type v2exClient struct {
+	// A refresh replaces both cache generations only after an older request
+	// has finished. The older request can never populate the fresh caches.
+	topicsMu   sync.Mutex
 	client     *resty.Client
 	v1TopicApi *api_topics.V1TopicApi
 	v2TopicApi *api_topics.V2TopicApi

@@ -35,7 +35,7 @@ func (m helpPage) Update(tea.Msg) (tea.Model, tea.Cmd) { return m, nil }
 
 func (m helpPage) View() string {
 	w, h := g.Window.GetSize()
-	panelWidth := min(max(w-6, 34), 92)
+	panelWidth := min(max(w-4, 1), 92)
 
 	navigation := []shortcut{
 		{"W/K/↑", "向上选择或滚动"},
@@ -46,9 +46,11 @@ func (m helpPage) View() string {
 		{"Enter", "打开主题 / 加载评论"},
 	}
 	actions := []shortcut{
-		{"R", "解码图片和 Base64"},
+		{"Ctrl+R", "刷新 / 失败重试"},
+		{"v", "本地浏览历史"},
+		{"r", "解码图片 / Base64"},
 		{"F1", "在浏览器中打开"},
-		{"U", "检查并安装更新"},
+		{"u", "检查并安装更新"},
 		{"=", "切换底栏显示模式"},
 	}
 	global := []shortcut{
@@ -63,19 +65,19 @@ func (m helpPage) View() string {
 	var groups string
 	if panelWidth < 60 {
 		compactItems := []shortcut{
-			{"W/K/↑", "向上选择或滚动"},
-			{"S/J/↓", "向下选择或滚动"},
-			{"A/H/←", "上一页"},
-			{"D/L/→", "下一页"},
+			{"↑↓/j/k", "选择或滚动"},
+			{"←→/h/l", "切换主题页"},
 			{"Tab", "切换节点"},
 			{"Enter", "打开 / 加载"},
-			{"R", "解码内容"},
+			{"Ctrl+R", "刷新 / 失败重试"},
+			{"v", "本地浏览历史"},
+			{"r", "解码内容"},
 			{"F1", "浏览器打开"},
-			{"U", "检查更新"},
+			{"u", "检查更新"},
 			{"=", "切换底栏"},
 			{"Space", "老板键"},
 			{"?", "帮助"},
-			{"， / `", "设置 / 返回"},
+			{", / `", "设置 / 返回"},
 			{"Q", "返回"},
 			{"Esc", "退出"},
 		}

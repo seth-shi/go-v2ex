@@ -62,7 +62,7 @@ func (api *V1TopicApi) GetTopicsByGroupNode(
 	if len(api.cacheData) == 0 {
 		// 如果没有缓存, 或者当前页码数据不在缓存中, 那么去从接口聚合获取
 		var result []response.TopicResult
-		result, err = api.groupRequestData(node)
+		result, err = api.groupRequestData(ctx, node)
 		if err != nil {
 			return
 		}
@@ -96,13 +96,12 @@ func (api *V1TopicApi) finishRequest(err *error) {
 	}
 }
 
-func (api *V1TopicApi) groupRequestData(groupNode g.GroupNode) (
+func (api *V1TopicApi) groupRequestData(ctx context.Context, groupNode g.GroupNode) (
 	[]response.TopicResult,
 	error,
 ) {
 	// 并发获取子节点的数据
 	var (
-		ctx      = context.Background()
 		chResult = make(chan []response.TopicResult)
 		chError  = make(chan error, 1)
 		eg       errgroup.Group
